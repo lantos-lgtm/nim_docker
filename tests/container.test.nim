@@ -8,5 +8,17 @@
 import unittest
 
 import nim_docker
-test "can add":
+# things we care about
+# get container details
+# list containers
+# container
+#  - start/stop/restart
+#  - create/remove
+#  - attach/log/exec/inspect
+#  - rename
+#  - pause/unpause
+#  - commit/export/import
+
+test "can create a container":
   check add(5, 5) == 10
+
