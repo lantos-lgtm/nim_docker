@@ -13,13 +13,16 @@ type
     client*: HttpClient
     baseUrl*: string
     version*: string
+
   Port* = object
     IP*: string
     PrivatePort*: uint16
     PublicPort*: uint16
     Type*: string
+
   HostConfig* = object
     NetworkMode*: string
+
   EndpointIPAMConfig* = object
     IPv4Address*: string
     IPv6Address*: string
@@ -44,7 +47,7 @@ type
 
   SummaryNetworkSettings* = object
     Networks*: Table[string, EndpointSettings]
-    
+
   MountPoint* = object
     Type*: string
     Name*: string
@@ -54,7 +57,6 @@ type
     Mode*: string
     RW*: bool
     Propagation*: string # todo
-
 
   Container* = object
     ID*: string
@@ -72,6 +74,7 @@ type
     HostConfig*: HostConfig
     NetworkSettings*: SummaryNetworkSettings
     Mounts*: seq[MountPoint]
+
   # errors
   DockerError* = object of Exception
   BadRequest* = object of DockerError
