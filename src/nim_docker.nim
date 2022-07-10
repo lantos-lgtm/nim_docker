@@ -3,19 +3,19 @@
 # but you can remove it if you wish.
 
 import
-  nim_docker/types,
-  nim_docker/client,
-  options,
-  tables,
-  jsony
+    nim_docker/types,
+    nim_docker/client,
+    options,
+    tables
 
-export
-  types,
-  client
+export types, client
 
 proc main() =
-  var docker = initDocker("unix:///var/run/docker.sock")
-  echo docker.containers()
+    # var docker = initDocker("unix:///var/run/docker.sock")
+    var docker = initDocker("http://localhost:5000/")
+    # echo docker.containers()
+    let containerConfig = ContainerConfig()
+    echo docker.containerCreate("myContainer", containerConfig)
 
 when isMainModule:
-  main()
+    main()
