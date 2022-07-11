@@ -21,25 +21,30 @@ proc main*() =
 
     var docker = initDocker("unix:///var/run/docker.sock")
 
-    echo docker.containers(all=true).toJson()
-    
-    let containerConfig = ContainerConfig(
-        Image: "nginx:alpine",
-        ExposedPorts: some({
-            "80/tcp": none(Table[string,string])
-        }.newTable()[]),
-        HostConfig: (HostConfig(
-            PortBindings: some({
-                "80/tcp": (@[
-                    {"HostPort":"8080"}.newTable()[]
-                ])
-            }.newTable()[])
-        ))
-    )
-    echo docker.containerStop("myContainer")
-    echo docker.containerRemove("myContainer")
-    echo docker.containerCreate("myContainer", containerConfig)
-    echo docker.containerStart("myContainer")
+    # echo docker.containers(all=true).toJson()
+
+    # let containerConfig = ContainerConfig(
+    #     Image: "nginx:alpine",
+    #     ExposedPorts: some({
+    #         "80/tcp": none(Table[string,string])
+    #     }.newTable()[]),
+    #     HostConfig: (HostConfig(
+    #         PortBindings: some({
+    #             "80/tcp": (@[
+    #                 {"HostPort":"8080"}.newTable()[]
+    #             ])
+    #         }.newTable()[])
+    #     ))
+    # )
+    # echo docker.containerStop("myContainer")
+    # echo docker.containerRemove("myContainer")
+    # echo docker.containerCreate("myContainer", containerConfig)
+    # echo docker.containerStart("myContainer")
+
+    echo docker.containerStats("myContainer", ContainerStatsOptions(
+        stream: false,
+        oneShot: true
+    ))
     
 when isMainModule:
     main()

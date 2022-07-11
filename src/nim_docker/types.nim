@@ -184,31 +184,55 @@ type
         Domainname*: string
         User*: string # User that will run the command(s) inside the container, also support user:group
         AttachStdin*: bool # Attach the standard input, makes possible user interaction
-        AttachStdout*: bool                    # Attach the standard output
-        AttachStderr*: bool                    # Attach the standard error
-        ExposedPorts*: options.Option[Table[string, Option[Table[string,
-            string]]]]                         # {"<port>/<tcp|udp|sctp>"*: {}}
+        AttachStdout*: bool                 # Attach the standard output
+        AttachStderr*: bool                 # Attach the standard error
+        ExposedPorts*: options.Option[
+            Table[string, Option[Table[string, string]]]] # {"<port>/<tcp|udp|sctp>"*: {}}
         Tty*: bool # Attach standard streams to a tty, including stdin if it is not closed.
-        OpenStdin*: bool                       # Open stdin default false
+        OpenStdin*: bool                    # Open stdin default false
         StdinOnce*: bool # If true, close stdin after the 1 attached client disconnects .  default false
         Env*: seq[string] # List of environment variable to set in the container
-        Cmd*: seq[string]                      # Command to run when starting the container
+        Cmd*: seq[string]                   # Command to run when starting the container
         Healthcheck*: HealthConfig # Healthcheck describes how to check the container is healthy
         ArgsEscaped*: options.Option[bool] # True if command is already escaped (meaning treat as a command line) (Windows specific).
         Image*: string # Name of the image as it was passed by the operator (e.g. could be symbolic)
-        Volumes*: options.Option[Table[string, Option[Table[string,
-            string]]]]                         # List of volumes (mounts) used for the container
+        Volumes*: options.Option[
+            Table[string, Option[Table[string, string]]]
+            ]                               # List of volumes (mounts) used for the container
         WorkingDir*: string # Current directory (PWD) in the command will be launched i.g "/volumes/data"*: { }
-        Entrypoint*: seq[string]               # Entrypoint to run when starting the container
+        Entrypoint*: seq[string]            # Entrypoint to run when starting the container
         NetworkDisabled*: options.Option[bool] # Is network disabled
-        MacAddress*: options.Option[string]    # Mac Address of the container
+        MacAddress*: options.Option[string] # Mac Address of the container
         OnBuild*: options.Option[seq[string]] # ONBUILD metadata that were defined on the image Dockerfile
-        Labels*: Table[string, string]         # List of labels set to this container
-        StopSignal*: options.Option[string]    # Signal to stop a container
-        StopTimeout*: options.Option[int]      # Timeout (in seconds) to stop a container
-        Shell*: seq[string]                    # Shell for shell-form of RUN, CMD, ENTRYPOIN
+        Labels*: Table[string, string]      # List of labels set to this container
+        StopSignal*: options.Option[string] # Signal to stop a container
+        StopTimeout*: options.Option[int]   # Timeout (in seconds) to stop a container
+        Shell*: seq[string]                 # Shell for shell-form of RUN, CMD, ENTRYPOIN
         HostConfig*: HostConfig
         NetworkingConfig*: NetworkingConfig
 
+    ContainerStartOptions* = object
+        detatchKeys*: string
 
+    ContainerStopOptions* =  object
+        t*: int
+    ContainerKillOptions* =  object
+        signal*: string
+    ContainerRemoveOptions* =  object
+        v*: bool
+        force*: bool
+        link*: bool
+     
+    CreateResponse* = object
+        Id*: string
+        Warnings*: seq[string]
 
+    ContainerStatsOptions* = object
+        stream*: bool
+        oneShot*: bool
+
+    ReadCloser* = object
+        
+    ContainerStats* = object
+        Body*: ReadCloser
+        OSType*: string
