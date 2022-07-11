@@ -5,7 +5,9 @@
 import
     nim_docker/types,
     nim_docker/client,
-    tables
+    tables,
+    jsony,
+    options
     
 export types, client
 
@@ -18,12 +20,26 @@ proc main*() =
     # s.send("GET /containers/json HTTP/1.1\r\n\r\n")
 
     var docker = initDocker("unix:///var/run/docker.sock")
-    # var docker = initDocker("http://localhost:5000")
-    echo docker.containers()
+
+    echo docker.containers(all=true).toJson()
+    
     let containerConfig = ContainerConfig(
-        Image: "alpine:latest"
+        Image: "nginx:alpine",
+        ExposedPorts: some({
+            "80/tcp": none(Table[string,string])
+        }.newTable()[]),
+        HostConfig: (HostConfig(
+            PortBindings: some({
+                "80/tcp": (@[
+                    {"HostPort":"8080"}.newTable()[]
+                ])
+            }.newTable()[])
+        ))
     )
+    echo docker.containerStop("myContainer")
+    echo docker.containerRemove("myContainer")
     echo docker.containerCreate("myContainer", containerConfig)
+    echo docker.containerStart("myContainer")
     
 when isMainModule:
     main()
