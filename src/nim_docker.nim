@@ -4,23 +4,26 @@
 
 import
     nim_docker/types,
-    nim_docker/client
-
+    nim_docker/client,
+    tables
+    
 export types, client
 
-import net, os
 
-proc main() =
-    var path = "/var/run/docker.sock"
-    echo Protocol.
-    var s = newSocket(Domain.AF_UNIX, SockType.SOCK_STREAM, Protocol.IPPROTO_IP)
-    s.connectUnix(path)
-    s.send("GET /containers/json HTTP/1.1\r\n\r\n")
-    # var docker = initDocker("unix:///var/run/docker.sock")
-    # # var docker = initDocker("http://localhost:5000")
-    # echo docker.containers()
-    # let containerConfig = ContainerConfig()
-    # echo docker.containerCreate("myContainer", containerConfig)
+proc main*() =
+    # var path = "/var/run/docker.sock"
+    # var s = newSocket(Domain.AF_UNIX, SockType.SOCK_STREAM, Protocol.IPPROTO_IP)
+    # defer: s.close()
+    # s.connectUnix(path)
+    # s.send("GET /containers/json HTTP/1.1\r\n\r\n")
 
+    var docker = initDocker("unix:///var/run/docker.sock")
+    # var docker = initDocker("http://localhost:5000")
+    echo docker.containers()
+    let containerConfig = ContainerConfig(
+        Image: "alpine:latest"
+    )
+    echo docker.containerCreate("myContainer", containerConfig)
+    
 when isMainModule:
     main()

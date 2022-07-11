@@ -46,7 +46,7 @@ type
         DriverOpts*: Option[Table[string, string]]
 
     SummaryNetworkSettings* = object
-        Networks*: Table[string, EndpointSettings]
+        Networks*: options.Option[Table[string, EndpointSettings]]
 
     MountPoint* = object
         Type*: string
@@ -76,7 +76,7 @@ type
         Mounts*: seq[MountPoint]
 
     # errors
-    DockerError* = object of Exception
+    DockerError* = object of Defect
     BadRequest* = object of DockerError
     ServerError* = object of DockerError
 
@@ -166,7 +166,7 @@ type
         Privileged*: bool
         PublishAllPorts*: bool
         ReadonlyRootfs*: bool
-        SecurityOpt*: Table[string, string]
+        SecurityOpt*: seq[string]
         Tmpfs*: Table[string, string]
         UTSMode*: string
         UsernsMode*: string

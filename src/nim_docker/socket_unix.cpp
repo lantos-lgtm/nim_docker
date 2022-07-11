@@ -39,14 +39,20 @@ int main()
 
 	printf("Client: Connected \n");
 
-	while( printf(">"), fgets(send_msg, s_send_len, stdin), !feof(stdin))
-	{
+	// while( printf(">"), fgets(send_msg, s_send_len, stdin), !feof(stdin))
+	// {
+		strcpy(send_msg, "GET /containers/json HTTP/1.1\r\nHost: v1.41\r\nAccept: application/json\r\n\r\n");
 		if( send(sock, send_msg, strlen(send_msg)*sizeof(char), 0 ) == -1 )
 		{
 			printf("Client: Error on send() call \n");
 		}
 		memset(send_msg, 0, s_send_len*sizeof(char));
 		memset(recv_msg, 0, s_recv_len*sizeof(char));
+
+		if( (data_len = recv(sock, recv_msg, s_recv_len, 0)) > 0 )
+		{
+			printf("Client: Data received: %s \n", recv_msg);
+		}
 
 		if( (data_len = recv(sock, recv_msg, s_recv_len, 0)) > 0 )
 		{
@@ -62,11 +68,11 @@ int main()
 			{
 				printf("Client: Server socket closed \n");
 				close(sock);
-				break;
+				// break;
 			}
 
 		}
-	}
+	// }
 
 	printf("Client: bye! \n");
 

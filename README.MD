@@ -5,6 +5,12 @@ A nim Docker Engine client with types.
 - version: v1.41
 - https://docs.docker.com/engine/api/v1.41/
 
+## Todo
+- [ ] container support
+- [ ] image support
+- [ ] network support
+- [ ] volume support
+- [ ] ws
 Use
 ```nim
 import nim_docker
