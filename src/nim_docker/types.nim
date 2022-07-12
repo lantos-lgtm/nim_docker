@@ -4,9 +4,11 @@
 # this file as required.
 
 
-import httpClient
-import tables
-import options
+import 
+    httpClient,
+    tables,
+    options,
+    times
 
 type
     Docker* = object
@@ -236,3 +238,72 @@ type
     ContainerStats* = object
         Body*: ReadCloser
         OSType*: string
+    
+
+    Stats* = object
+        Read: DateTime
+        Preread: DateTime
+        PidsStats: PidsStats
+        BlkioStats: BlkioStats
+        NumProcs: uint32
+        StorageStats: StorageStats
+        CPUStats: CPUStats
+        PrecpuStats: CPUStats
+        MemoryStats: MemoryStats
+        Name: string
+        ID: string
+        Networks: Table[string, NetworkStats] 
+
+    BlkioStats = object
+        IoServiceBytesRecursive: seq[BlkioStatEntry]
+        IoServicedRecursive: seq[BlkioStatEntry]
+        IoQueueRecursive: seq[BlkioStatEntry]
+        IoServiceTimeRecursive: seq[BlkioStatEntry]
+        IoWaitTimeRecursive: seq[BlkioStatEntry]
+        IoMergedRecursive: seq[BlkioStatEntry]
+        IoTimeRecursive: seq[BlkioStatEntry]
+        SectorsRecursive: seq[BlkioStatEntry]
+
+    BlkioStatEntry = object
+        Major: uint64
+        Minor: uint64
+        Op: string
+        Value: uint64
+
+    CPUStats = object
+        CPUUsage: CPUUsage
+        SystemCPUUsage: uint64
+        OnlineCpus: uint32
+        ThrottlingData: ThrottlingData
+
+    CPUUsage = object
+        TotalUsage: uint64
+        PercpuUsage: seq[uint64]
+        UsageInKernelmode: uint64
+        UsageInUsermode: uint64
+
+    ThrottlingData = object
+        Periods: uint64
+        ThrottledPeriods: uint64
+        ThrottledTime: uint64
+
+    MemoryStats = object
+        Usage: uint64
+        Stats: Table[string, uint64]
+        Limit: uint64
+
+    NetworkStats = object
+        RxBytes: uint64
+        RxPackets: uint64
+        RxErrors: uint64
+        RxDropped: uint64
+        TxBytes: uint64
+        TxPackets: uint64
+        TxErrors: uint64
+        TxDropped: uint64
+
+    PidsStats = object
+        Current: uint64
+        Limit: uint64
+
+    StorageStats = object

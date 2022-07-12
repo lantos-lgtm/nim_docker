@@ -24,6 +24,7 @@ proc echoThread(myCallbackDataRef: MyCallbackDataRef) {.thread.} =
         var channelRes = myCallbackDataRef[].channel.tryRecv()
         if channelRes.dataAvailable:
             echo channelRes.msg
+            echo channelRes.msg.fromJson(Stats)
 
 
 proc main*() =
