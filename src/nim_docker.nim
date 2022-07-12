@@ -14,6 +14,9 @@ import
     
 export types, client
 
+
+# {.push raises: [].} # Always at start of module
+
 type
     MyCallbackDataRef = ref object
         channel: Channel[string]
@@ -24,7 +27,7 @@ proc echoThread(myCallbackDataRef: MyCallbackDataRef) {.thread.} =
         var channelRes = myCallbackDataRef[].channel.tryRecv()
         if channelRes.dataAvailable:
             echo channelRes.msg
-            echo channelRes.msg.fromJson(Stats)
+            echo channelRes.msg.fromJson(ContainerStats)
 
 
 proc main*() =
@@ -36,25 +39,25 @@ proc main*() =
 
     var docker = initDocker("unix:///var/run/docker.sock")
 
-    echo docker.containers(all=true).toJson()
+    docker.containers(all=true).toJson()
 
-    # let containerConfig = ContainerConfig(
-    #     Image: "nginx:alpine",
-    #     ExposedPorts: some({
-    #         "80/tcp": none(Table[string,string])
-    #     }.newTable()[]),
-    #     HostConfig: (HostConfig(
-    #         PortBindings: some({
-    #             "80/tcp": (@[
-    #                 {"HostPort":"8080"}.newTable()[]
-    #             ])
-    #         }.newTable()[])
-    #     ))
-    # )
-    # echo docker.containerStop("myContainer")
-    # echo docker.containerRemove("myContainer")
-    # echo docker.containerCreate("myContainer", containerConfig)
-    # echo docker.containerStart("myContainer")
+    let containerConfig = ContainerConfig(
+        image: "nginx:alpine",
+        exposedPorts: some({
+            "80/tcp": none(Table[string,string])
+        }.newTable()[]),
+        hostConfig: (HostConfig(
+            portBindings: some({
+                "80/tcp": (@[
+                    {"HostPort":"8080"}.newTable()[]
+                ])
+            }.newTable()[])
+        ))
+    )
+    echo docker.containerStop("myContainer")
+    echo docker.containerRemove("myContainer")
+    echo docker.containerCreate("myContainer", containerConfig)
+    echo docker.containerStart("myContainer")
     var myCallbackDataRef = MyCallbackDataRef()
     myCallbackDataRef[].channel.open()
 
