@@ -8,12 +8,9 @@ import
     tables,
     jsony,
     options,
-    streams,
-    os,
     threadpool
     
-export types, client
-
+export types, client, tables, jsony, options, threadpool
 
 # {.push raises: [].} # Always at start of module
 
@@ -26,8 +23,9 @@ proc echoThread(myCallbackDataRef: MyCallbackDataRef) {.thread.} =
     while true:
         var channelRes = myCallbackDataRef[].channel.tryRecv()
         if channelRes.dataAvailable:
-            echo channelRes.msg
-            echo channelRes.msg.fromJson(ContainerStats)
+            # echo channelRes.msg
+            let containerStats = channelRes.msg.fromJson(ContainerStats)
+            echo containerStats.getHumanReadableStats()
 
 
 proc main*() =
@@ -39,7 +37,7 @@ proc main*() =
 
     var docker = initDocker("unix:///var/run/docker.sock")
 
-    docker.containers(all=true).toJson()
+    echo docker.containers(all=true).toJson()
 
     let containerConfig = ContainerConfig(
         image: "nginx:alpine",

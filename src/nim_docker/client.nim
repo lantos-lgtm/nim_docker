@@ -3,6 +3,7 @@ import httpClient
 import jsony
 import libcurl
 import strutils, strformat
+import tables
 import re
 
 proc initDocker*(baseUrl: string): Docker =
@@ -218,3 +219,51 @@ proc containerStats*(
             curlWriteDataPtr=curlWriteDataPtr
         )
     res
+
+
+proc calculateCPUPercentUNIX(stats: ContainerStats): float64 =
+    var 
+        cpuPercent = 0.0
+        # calculate the change for the cpu usage of the container in between readings
+        cpuDelta = float64(stats.cpuStats.cpuUsage.totalUsage) - float64(stats.preCpuStats.cpuUsage.totalUsage)
+        # calculate the change for the entire system between readings
+        systemDelta = float64(stats.cpuStats.systemCpuUsage) - float64(stats.preCpuStats.systemCpuUsage)
+        onlineCPUs  = float64(stats.cpuStats.onlineCpus)
+
+
+    if onlineCPUs == 0.0: 
+        onlineCPUs = float64(len(stats.cpuStats.cpuUsage.perCpuUsage))
+
+    if systemDelta > 0.0 and cpuDelta > 0.0:
+        cpuPercent = (cpuDelta / systemDelta) * onlineCpus * 100.0
+    cpuPercent
+
+
+proc getHumanReadableStats*(stats: ContainerStats): HumanReadableStats =
+    # https://docs.docker.com/engine/api/v1.41/#tag/Container/operation/ContainerStats
+    # used_memory = memory_stats.usage - memory_stats.stats.cache
+    # available_memory = memory_stats.limit
+    # Memory usage % = (used_memory / available_memory) * 100.0
+    # cpu_delta = cpu_stats.cpu_usage.total_usage - precpu_stats.cpu_usage.total_usage
+    # system_cpu_delta = cpu_stats.system_cpu_usage - precpu_stats.system_cpu_usage
+    # number_cpus = lenght(cpu_stats.cpu_usage.percpu_usage) or cpu_stats.online_cpus
+    # CPU usage % = (cpu_delta / system_cpu_delta) * number_cpus * 100.0
+
+
+    # https://github.com/docker/cli/blob/53f8ed4bec07084db4208f55987a2ea94b7f01d6/cli/command/container/stats_helpers.go#L227-L249
+    try:
+        result.usedMemory = stats.memoryStats.usage - stats.memoryStats.stats["cache"]
+    except:
+        try:
+            result.usedMemory = stats.memoryStats.usage - stats.memoryStats.stats["total_inactive_file"]
+        except:
+            result.usedMemory = stats.memoryStats.usage - stats.memoryStats.stats["inactive_file"]
+
+    result.availableMemory = stats.memoryStats.limit
+    result.memoryUsagePercent = (float(result.usedMemory) / float(result.availableMemory)) * 100.0
+    result.cpuDelta = stats.cpuStats.cpuUsage.totalUsage - stats.preCpuStats.cpuUsage.totalUsage
+    result.systemCpuDelta = stats.cpuStats.systemCpuUsage - stats.preCpuStats.systemCpuUsage
+    result.numberCpus = len(stats.cpuStats.cpuUsage.percpuUsage) or stats.cpuStats.onlineCpus
+    # unix and windows have two different ways of calculating cpu usage. We need to handle both.
+
+    result.cpuUsagePercent = stats.calculateCPUPercentUNIX()

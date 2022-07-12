@@ -9,8 +9,10 @@ import
     tables,
     options,
     times,
+    strutils,
     jsony
 
+export tables, options, jsony, times, strutils, httpClient
 
 # parse hook to convert GO time.time.rfc3339nano to nim time
 proc parseHook*(s: string, i: var int, v: var DateTime) =
@@ -22,26 +24,13 @@ proc parseHook*(s: string, i: var int, v: var DateTime) =
     # "0001-01-01T00:00:00Z"
     try:
         # go time.time probably has a bug and isn't always posting 9 bits of precision
-        if str.len() == 29:
-            str = str[0..str.high-1]
-            str.add("0Z")
-            v = str.parse("yyyy-MM-dd'T'HH':'mm':'ss'.'fffffffff'Z'")
-
-        v = str.parse("yyyy-MM-dd'T'HH':'mm':'ss'.'fffffffff'Z'")
-    except TimeParseError:
         v = str.parse("yyyy-MM-dd'T'HH':'mm':'ss'Z'")
+    except TimeParseError:
+        if str.len() != 30:
+            str = str[0..str.high-(30-str.len())]
+            str.add("0".repeat(29-str.len()) & "Z")
+        v = str.parse("yyyy-MM-dd'T'HH':'mm':'ss'.'fffffffff'Z'")
 
-
-# Custom Types
-type
-    HumanReadableStats = object
-        usedMemory: uint64
-        availableMemory: uint64
-        memoryUsage: float64
-        cpuDelta: uint64
-        systemCpuDelta: uint64
-        numberCpus: uint64 
-        cpuUsage: uint64
 
 
 # Docker types
@@ -98,6 +87,7 @@ type
     Container* = object
         id*: string
         names*: seq[string]
+        # `OSType`: string
         image*: string
         imageID*: string
         command*: string
@@ -221,30 +211,30 @@ type
         domainname*: string
         user*: string # User that will run the command(s) inside the container, also support user:group
         attachStdin*: bool # Attach the standard input, makes possible user interaction
-        attachStdout*: bool                 # Attach the standard output
-        attachStderr*: bool                 # Attach the standard error
+        attachStdout*: bool            # Attach the standard output
+        attachStderr*: bool            # Attach the standard error
         exposedPorts*: Option[
             Table[string, Option[Table[string, string]]]] # {"<port>/<tcp|udp|sctp>"*: {}}
         tty*: bool # Attach standard streams to a tty, including stdin if it is not closed.
-        openStdin*: bool                    # Open stdin default false
+        openStdin*: bool               # Open stdin default false
         stdinOnce*: bool # If true, close stdin after the 1 attached client disconnects .  default false
-        env*: seq[string] # List of environment variable to set in the container
-        cmd*: seq[string]                   # Command to run when starting the container
+        env*: seq[string]              # List of environment variable to set in the container
+        cmd*: seq[string]              # Command to run when starting the container
         healthcheck*: HealthConfig # Healthcheck describes how to check the container is healthy
         argsEscaped*: Option[bool] # True if command is already escaped (meaning treat as a command line) (Windows specific).
         image*: string # Name of the image as it was passed by the operator (e.g. could be symbolic)
         volumes*: Option[
             Table[string, Option[Table[string, string]]]
-            ]                               # List of volumes (mounts) used for the container
+            ]                          # List of volumes (mounts) used for the container
         workingDir*: string # Current directory (PWD) in the command will be launched i.g "/volumes/data"*: { }
-        entrypoint*: seq[string]            # Entrypoint to run when starting the container
+        entrypoint*: seq[string]       # Entrypoint to run when starting the container
         networkDisabled*: Option[bool] # Is network disabled
-        macAddress*: Option[string] # Mac Address of the container
+        macAddress*: Option[string]    # Mac Address of the container
         onBuild*: Option[seq[string]] # ONBUILD metadata that were defined on the image Dockerfile
-        labels*: Table[string, string]      # List of labels set to this container
-        stopSignal*: Option[string] # Signal to stop a container
-        stopTimeout*: Option[int]   # Timeout (in seconds) to stop a container
-        shell*: seq[string]                 # Shell for shell-form of RUN, CMD, ENTRYPOIN
+        labels*: Table[string, string] # List of labels set to this container
+        stopSignal*: Option[string]    # Signal to stop a container
+        stopTimeout*: Option[int]      # Timeout (in seconds) to stop a container
+        shell*: seq[string]            # Shell for shell-form of RUN, CMD, ENTRYPOIN
         hostConfig*: HostConfig
         networkingConfig*: NetworkingConfig
 
@@ -270,82 +260,80 @@ type
 
 
     ContainerStats* = object
-        read: DateTime
-        preread: DateTime
-        pidsStats: PidsStats
-        blkioStats: BlkioStats
-        numProcs: uint32
-        storageStats: StorageStats
-        cpuStats: CPUStats
-        precpuStats: CPUStats
-        memoryStats: MemoryStats
-        name: string
-        id: string
-        networks: Table[string, NetworkStats]
+        read*: DateTime
+        preread*: DateTime
+        pidsStats*: PidsStats
+        blkioStats*: BlkioStats
+        numProcs*: uint32
+        storageStats*: StorageStats
+        cpuStats*: CPUStats
+        preCpuStats*: CPUStats
+        memoryStats*: MemoryStats
+        name*: string
+        id*: string
+        networks*: Table[string, NetworkStats]
 
     BlkioStats = object
-        ioServiceBytesRecursive: Option[seq[BlkioStatEntry]]
-        ioServicedRecursive: Option[seq[BlkioStatEntry]]
-        ioQueueRecursive: Option[seq[BlkioStatEntry]]
-        ioServiceTimeRecursive: Option[seq[BlkioStatEntry]]
-        ioWaitTimeRecursive: Option[seq[BlkioStatEntry]]
-        ioMergedRecursive: Option[seq[BlkioStatEntry]]
-        ioTimeRecursive: Option[seq[BlkioStatEntry]]
-        sectorsRecursive: Option[seq[BlkioStatEntry]]
+        ioServiceBytesRecursive*: Option[seq[BlkioStatEntry]]
+        ioServicedRecursive*: Option[seq[BlkioStatEntry]]
+        ioQueueRecursive*: Option[seq[BlkioStatEntry]]
+        ioServiceTimeRecursive*: Option[seq[BlkioStatEntry]]
+        ioWaitTimeRecursive*: Option[seq[BlkioStatEntry]]
+        ioMergedRecursive*: Option[seq[BlkioStatEntry]]
+        ioTimeRecursive*: Option[seq[BlkioStatEntry]]
+        sectorsRecursive*: Option[seq[BlkioStatEntry]]
 
     BlkioStatEntry = object
-        major: uint64
-        minor: uint64
-        op: string
-        value: uint64
+        major*: uint64
+        minor*: uint64
+        op*: string
+        value*: uint64
 
     CPUStats = object
-        cpuUsage: CPUUsage
-        systemCPUUsage: uint64
-        onlineCpus: uint32
-        throttlingData: ThrottlingData
+        cpuUsage*: CPUUsage
+        systemCpuUsage*: uint64
+        onlineCpus*: int
+        throttlingData*: ThrottlingData
 
     CPUUsage = object
-        totalUsage: uint64
-        percpuUsage: seq[uint64]
-        usageInKernelmode: uint64
-        usageInUsermode: uint64
+        totalUsage*: uint64
+        perCpuUsage*: seq[uint64]
+        usageInKernelmode*: uint64
+        usageInUsermode*: uint64
 
     ThrottlingData = object
-        periods: uint64
-        throttledPeriods: uint64
-        throttledTime: uint64
+        periods*: uint64
+        throttledPeriods*: uint64
+        throttledTime*: uint64
 
     MemoryStats = object
-        usage: uint64
-        stats: Table[string, uint64]
-        limit: uint64
+        usage*: uint64
+        stats*: Table[string, uint64]
+        limit*: uint64
 
     NetworkStats = object
-        rxBytes: uint64
-        rxPackets: uint64
-        rxErrors: uint64
-        rxDropped: uint64
-        txBytes: uint64
-        txPackets: uint64
-        txErrors: uint64
-        txDropped: uint64
+        rxBytes*: uint64
+        rxPackets*: uint64
+        rxErrors*: uint64
+        rxDropped*: uint64
+        txBytes*: uint64
+        txPackets*: uint64
+        txErrors*: uint64
+        txDropped*: uint64
 
     PidsStats = object
-        current: uint64
-        limit: uint64
+        current*: uint64
+        limit*: uint64
 
     StorageStats = object
 
-
-
-proc getHumanReadableStats*(stats: ContainerStats): HumanReadableStats =
-    # https://docs.docker.com/engine/api/v1.41/#tag/Container/operation/ContainerStats
-    # used_memory = memory_stats.usage - memory_stats.stats.cache
-    # available_memory = memory_stats.limit
-    # Memory usage % = (used_memory / available_memory) * 100.0
-    # cpu_delta = cpu_stats.cpu_usage.total_usage - precpu_stats.cpu_usage.total_usage
-    # system_cpu_delta = cpu_stats.system_cpu_usage - precpu_stats.system_cpu_usage
-    # number_cpus = lenght(cpu_stats.cpu_usage.percpu_usage) or cpu_stats.online_cpus
-    # CPU usage % = (cpu_delta / system_cpu_delta) * number_cpus * 100.0
-    result.usedMemory = stats.memoryStats.usage - stats.memoryStats.stats["cache"]
+# Custom Types
+type
+    HumanReadableStats* = object
+        usedMemory*: uint64
+        availableMemory*: uint64
+        memoryUsagePercent*: float64
+        cpuDelta*: uint64
+        systemCpuDelta*: uint64
+        numberCpus*: int
+        cpuUsagePercent*: float
