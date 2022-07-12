@@ -7,9 +7,23 @@ import
     nim_docker/client,
     tables,
     jsony,
-    options
+    options,
+    streams,
+    os,
+    threadpool
     
 export types, client
+
+type
+    MyCallbackDataRef = ref object
+        channel: Channel[string]
+    
+
+proc echoThread(myCallbackDataRef: MyCallbackDataRef) {.thread.} =
+    while true:
+        var channelRes = myCallbackDataRef[].channel.tryRecv()
+        if channelRes.dataAvailable:
+            echo channelRes.msg
 
 
 proc main*() =
@@ -21,7 +35,7 @@ proc main*() =
 
     var docker = initDocker("unix:///var/run/docker.sock")
 
-    # echo docker.containers(all=true).toJson()
+    echo docker.containers(all=true).toJson()
 
     # let containerConfig = ContainerConfig(
     #     Image: "nginx:alpine",
@@ -40,11 +54,33 @@ proc main*() =
     # echo docker.containerRemove("myContainer")
     # echo docker.containerCreate("myContainer", containerConfig)
     # echo docker.containerStart("myContainer")
+    var myCallbackDataRef = MyCallbackDataRef()
+    myCallbackDataRef[].channel.open()
 
-    echo docker.containerStats("myContainer", ContainerStatsOptions(
-        stream: false,
-        oneShot: true
-    ))
+
+    proc curlWriteFn(
+            buffer: cstring,
+            size: int,
+            count: int,
+            outstream: pointer
+        ): int =
+        var myCallbackDataRef = cast[MyCallbackDataRef](outstream)
+        myCallbackDataRef.channel.send($buffer)
+        result = size * count
+        
+
+    discard spawn docker.containerStats("myContainer", 
+        ContainerStatsOptions(
+            stream: true,
+            oneShot: false
+        ),
+        curlWriteFn,
+        myCallbackDataRef[].unsafeAddr
+      )
+
+    spawn echoThread(myCallbackDataRef)
+
+    sync()
     
 when isMainModule:
     main()

@@ -10,6 +10,23 @@ proc initDocker*(baseUrl: string): Docker =
     result.baseUrl = baseUrl
     result.version = "v1.41"
 
+
+type CurlWriteFnHandle* = proc (   
+                buffer: cstring,
+                size: int,
+                count: int,
+                outstream: pointer): int {. gcsafe, locks: 0.}
+
+proc defaultCurlWriteFn(
+        buffer: cstring,
+        size: int,
+        count: int,
+        outstream: pointer
+    ): int =
+    let outbuf = cast[ref string](outstream)
+    outbuf[] &= buffer
+    result = size * count
+
 # can swap this to puppy if puppy supported sockets
 proc request*(
             docker: Docker,
@@ -19,28 +36,28 @@ proc request*(
             multipartData: MultipartData,
             useCurl: bool = false,
             headers: HttpHeaders = newHttpHeaders({"Accept": "application/json",
-                "Content-Type": "application/json"})
+                "Content-Type": "application/json"}),
+            curlWriteFn: CurlWriteFnHandle = defaultCurlWriteFn,
+            curlWriteDataPtr: pointer = nil
         ): string =
     # a wrapper to choose between curl and inbult nim request
     # this is needed because nim request doesn't support http://unix:// or unix://
 
         let useUnix = docker.baseUrl.startsWith("unix://")
         if useCurl or useUnix:
+            # this weird pattern is done to allow higher functions to pass the pointer 
+            # to a ref object that can be assigned to in the curlWriteFn function
+            
             let webData: ref string = new string
+            var tempCurlWriteDataPtr = curlWriteDataPtr 
+            if tempCurlWriteDataPtr.isNil:
+                tempCurlWriteDataPtr = webData[].addr
+
             # /var/run/docker.sock
             let socketPath = docker.baseUrl[7..docker.baseUrl.high]
             let curl = easy_init()
             # function for curl to handle the data returned
-            proc curlWriteFn(
-                    buffer: cstring,
-                    size: int,
-                    count: int,
-                    outstream: pointer
-                ): int =
-                let outbuf = cast[ref string](outstream)
-                outbuf[] &= buffer
-                result = size * count
-                echo buffer
+
             # memory to hold returned data
 
             # use unix if unix Sock is specified else use http
@@ -65,7 +82,7 @@ proc request*(
             discard curl.easy_setopt(OPT_HTTPHEADER, headerChunk);
 
 
-            discard curl.easy_setopt(OPT_WRITEDATA, webData)
+            discard curl.easy_setopt(OPT_WRITEDATA, tempCurlWriteDataPtr)
             discard curl.easy_setopt(OPT_WRITEFUNCTION, curlWriteFn)
             discard curl.easy_setopt(OPT_VERBOSE, 1)
             let ret = curl.easy_perform()
@@ -98,6 +115,7 @@ proc containers*(docker: Docker, all: bool = false): seq[Container] =
     let httpPath = "/containers/json" & (if all: "?all=true" else: "")
     let httpUrl = docker.version & httpPath
     let res = docker.request(httpUrl, HttpGet, "", nil)
+    echo res
     res.fromJson(seq[Container])
 
 proc containerCreate*(
@@ -184,7 +202,9 @@ proc containerRemove*(
 proc containerStats*(
             docker: Docker,
             id: string, # name or id
-            options = ContainerStatsOptions(stream: true)
+            options = ContainerStatsOptions(stream: true),
+            curlWriteFn: CurlWriteFnHandle = defaultCurlWriteFn,
+            curlWriteDataPtr: pointer = nil
         ): string =
     let httpPath = "/containers/" & id & "/stats"
     let httpUrl = docker.version & httpPath
@@ -193,6 +213,8 @@ proc containerStats*(
             HttpMethod.HttpGet,
             options.toJson(),
             nil,
-            false
+            false,
+            curlWriteFn=curlWriteFn,
+            curlWriteDataPtr=curlWriteDataPtr
         )
     res
