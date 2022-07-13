@@ -1,10 +1,11 @@
-import ./types
-import httpClient
-import jsony
-import libcurl
-import strutils, strformat
-import tables
-import re
+import 
+    ./types,
+    httpClient,
+    jsony,
+    libcurl,
+    strutils,
+    tables,
+    re
 
 proc initDocker*(baseUrl: string): Docker =
     result.client = newHttpClient()
