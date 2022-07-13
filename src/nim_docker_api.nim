@@ -3,8 +3,8 @@
 # but you can remove it if you wish.
 
 import
-    nim_docker/types,
-    nim_docker/client,
+    nim_docker_api/types,
+    nim_docker_api/client,
     tables,
     jsony,
     options,

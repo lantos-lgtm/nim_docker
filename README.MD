@@ -1,4 +1,4 @@
-# Nim_docker
+# nim_docker_api
 A nim Docker Engine client with types.
 
 - currently WIP
@@ -13,7 +13,7 @@ A nim Docker Engine client with types.
 - [ ] ws
 Use
 ```nim
-import nim_docker
+import nim_docker_api
 
 proc main()=
     var docker = initDocker("unix:///var/run/docker.sock")

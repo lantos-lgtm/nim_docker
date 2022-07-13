@@ -7,7 +7,7 @@
 
 import unittest
 
-import nim_docker/types
+import nim_docker_api/types
 import jsony
 import tables
 import options

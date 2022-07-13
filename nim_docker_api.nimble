@@ -6,7 +6,7 @@ description   = "A new awesome nimble package"
 license       = "Proprietary"
 srcDir        = "src"
 binDir        = "bin"
-bin           = @["nim_docker"]
+bin           = @["nim_docker_api"]
 # Dependencies
 
 requires "nim >= 1.6.6"
