@@ -14,19 +14,6 @@ export types, client, tables, jsony, options, threadpool
 
 # {.push raises: [].} # Always at start of module
 
-type
-    MyCallbackDataRef = ref object
-        channel: Channel[string]
-    
-
-proc echoThread(myCallbackDataRef: MyCallbackDataRef) {.thread.} =
-    while true:
-        var channelRes = myCallbackDataRef[].channel.tryRecv()
-        if channelRes.dataAvailable:
-            # echo channelRes.msg
-            let containerStats = channelRes.msg.fromJson(ContainerStats)
-            echo containerStats.getHumanReadableStats()
-
 
 proc main*() =
     # var path = "/var/run/docker.sock"
@@ -52,12 +39,35 @@ proc main*() =
             }.newTable()[])
         ))
     )
+    # stopping existing container
     echo docker.containerStop("myContainer")
+    # removing existing container
     echo docker.containerRemove("myContainer")
+    # creating new container
     echo docker.containerCreate("myContainer", containerConfig)
+    # starting new container
     echo docker.containerStart("myContainer")
-    var myCallbackDataRef = MyCallbackDataRef()
-    myCallbackDataRef[].channel.open()
+
+
+    # getting stats from container (with threads)
+    # 1. create a channel to pass info between threads
+    # 2. create a thread function to read from the channel
+    # 3. create a callback function to write to the channel from libcurl
+    # 4. spawn a thread to run libcurl in
+    # 5. spawn a thread to run the thread function in
+    # 6. wait for the threads to finish
+
+    type
+        MyCallbackDataRef = ref object
+            channel: Channel[string]
+        
+    proc echoThread(myCallbackDataRef: MyCallbackDataRef) {.thread.} =
+        while true:
+            var channelRes = myCallbackDataRef[].channel.tryRecv()
+            if channelRes.dataAvailable:
+                # echo channelRes.msg
+                let containerStats = channelRes.msg.fromJson(ContainerStats)
+                echo containerStats.getHumanReadableStats()
 
 
     proc curlWriteFn(
@@ -69,7 +79,9 @@ proc main*() =
         var myCallbackDataRef = cast[MyCallbackDataRef](outstream)
         myCallbackDataRef.channel.send($buffer)
         result = size * count
-        
+
+    var myCallbackDataRef = MyCallbackDataRef()
+    myCallbackDataRef[].channel.open()
 
     discard spawn docker.containerStats("myContainer", 
         ContainerStatsOptions(
