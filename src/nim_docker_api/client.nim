@@ -226,9 +226,9 @@ proc calculateCPUPercentUNIX(stats: ContainerStats): float64 =
     var 
         cpuPercent = 0.0
         # calculate the change for the cpu usage of the container in between readings
-        cpuDelta = float64(stats.cpuStats.cpuUsage.totalUsage) - float64(stats.preCpuStats.cpuUsage.totalUsage)
+        cpuDelta = float64(stats.cpuStats.cpuUsage.totalUsage - stats.preCpuStats.cpuUsage.totalUsage)
         # calculate the change for the entire system between readings
-        systemDelta = float64(stats.cpuStats.systemCpuUsage) - float64(stats.preCpuStats.systemCpuUsage)
+        systemDelta = float64(stats.cpuStats.systemCpuUsage - stats.preCpuStats.systemCpuUsage)
         onlineCPUs  = float64(stats.cpuStats.onlineCpus)
 
 

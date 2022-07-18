@@ -99,7 +99,7 @@ type
         state*: string
         status*: string
         hostConfig*: ContainerHostConfig # conflicting with HostConfig below
-        betworkSettings*: SummaryNetworkSettings
+        networkSettings*: SummaryNetworkSettings
         mounts*: seq[MountPoint]
 
     # errors
@@ -191,7 +191,7 @@ type
         oomScoreAdj*: int
         pidMode*: string
         privileged*: bool
-        ublishAllPorts*: bool
+        publishAllPorts*: bool
         readonlyRootfs*: bool
         securityOpt*: seq[string]
         tmpfs*: Table[string, string]

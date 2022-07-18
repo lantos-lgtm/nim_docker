@@ -8,9 +8,15 @@ import
     tables,
     jsony,
     options,
-    threadpool
-    
+    threadpool,
+    httpclient,
+    async,
+    os,
+    random,
+    weave
 export types, client, tables, jsony, options, threadpool
+
+
 
 # {.push raises: [].} # Always at start of module
 
@@ -22,8 +28,8 @@ proc main*() =
     # s.connectUnix(path)
     # s.send("GET /containers/json HTTP/1.1\r\n\r\n")
 
-    var docker = initDocker("unix:///var/run/docker.sock")
-
+    # var docker = initDocker("unix:///var/run/docker.sock")
+    var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
     echo docker.containers(all=true).toJson()
 
     let containerConfig = ContainerConfig(
@@ -96,5 +102,21 @@ proc main*() =
 
     sync()
     
+
+proc spam(threadId: int) =
+    sleep(random.rand(5000))
+    echo "spawning threadId: " & $threadId
+    var i = 0
+    var client = newHttpClient()
+    while true:
+        let res = client.get("http://192.168.1.210:8080")
+        i.inc()
+        if i mod 100 == 0:
+            echo "threadId: " & $threadId & " polls:" & $i & " res: " & $res.code()
+
+
 when isMainModule:
     main()
+    # for i in 1..20:
+    #     spawn spam(i)
+    # sync()

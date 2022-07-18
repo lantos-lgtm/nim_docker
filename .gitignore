@@ -1,4 +1,22 @@
-*.out
-bin
-src/.DS_Store
+# ignore db and secrets
+database.sqlite
+database.sqlite.bak
+.env
+
+# ignore cahce and auto gen files
+uploads
+__pycache__
+build
+node_modules
 .DS_Store
+
+# Ignore binary files
+*
+# Unignore all with extensions
+!*.*
+# Unignore all dirs
+!*/
+# Ignore `bin` dir
+bin/
+*/bin/*
+*.out
