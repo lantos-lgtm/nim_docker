@@ -1,3 +1,14 @@
+# Ignore binary files
+*
+# Unignore all with extensions
+!*.*
+# Unignore all dirs
+!*/
+# Ignore `bin` dir ORDER MATERS
+bin/
+*/bin/*
+*.out
+
 # ignore db and secrets
 database.sqlite
 database.sqlite.bak
@@ -9,14 +20,3 @@ __pycache__
 build
 node_modules
 .DS_Store
-
-# Ignore binary files
-*
-# Unignore all with extensions
-!*.*
-# Unignore all dirs
-!*/
-# Ignore `bin` dir
-bin/
-*/bin/*
-*.out
