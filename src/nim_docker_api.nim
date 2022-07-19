@@ -60,7 +60,7 @@ proc mainAsync*() {.async.}=
         hostConfig: (HostConfig(
             portBindings: some({
                 "80/tcp": (@[
-                    {"HostPort":"8081"}.newTable()[]
+                    {"HostPort":"8082"}.newTable()[]
                 ])
             }.newTable()[])
         ))
@@ -78,7 +78,7 @@ proc mainAsync*() {.async.}=
 
 
 when isMainModule:
-    # main()
+    main()
     waitFor mainAsync()
     # runForever()
     # for i in 1..20:
