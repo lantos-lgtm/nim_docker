@@ -40,6 +40,11 @@ type
         baseUrl*: string
         version*: string
 
+    AsyncDocker* = object
+        client*: AsyncHttpClient
+        baseUrl*: string
+        version*: string
+
     Port* = object
         ip*: string
         privatePort*: uint16

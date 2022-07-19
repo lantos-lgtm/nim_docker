@@ -898,7 +898,6 @@ proc newConnection(client: HttpClient | AsyncHttpClient;
         else:
           nativesockets.Port(80)
       else: nativesockets.Port(connectionUrl.port.parseInt)
-
     when client is HttpClient:
       if connectionUrl.scheme == "unix":
         client.socket = newSocket(
