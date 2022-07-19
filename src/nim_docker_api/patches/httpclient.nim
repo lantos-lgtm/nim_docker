@@ -909,7 +909,15 @@ proc newConnection(client: HttpClient | AsyncHttpClient;
       else:
         client.socket = await net.dial(connectionUrl.hostname, port)
     elif client is AsyncHttpClient:
-      client.socket = await asyncnet.dial(connectionUrl.hostname, port)
+      if connectionUrl.scheme == "unix":
+          client.socket = newAsyncSocket(
+            Domain.AF_UNIX,
+            SockType.SOCK_STREAM,
+            Protocol.IPPROTO_IP
+          )
+          await client.socket.connectUnix(connectionUrl.hostname)
+      else:
+        client.socket = await asyncnet.dial(connectionUrl.hostname, port)
     else: {.fatal: "Unsupported client type".}
 
     when defined(ssl):
@@ -1046,7 +1054,6 @@ proc requestAux(client: HttpClient | AsyncHttpClient; url: Uri;
     newHeaders["User-Agent"] = client.userAgent
   let headerString = generateHeaders(tempUrl, httpMethod, newHeaders,
                                      client.proxy)
-  echo headerString
   await client.socket.send(headerString)
 
   if data.len > 0:

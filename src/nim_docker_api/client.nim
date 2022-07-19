@@ -53,12 +53,15 @@ proc defaultCurlWriteFn(
 proc containers*(
             docker: Docker | AsyncDocker,
             all: bool = false
-        ): Future[seq[Container]] {.multiSync.} =
+        # ): Future[seq[Container]] {.multiSync.} =
+        ): Future[string] {.multiSync.} =
+        
     let httpPath = "/containers/json" & (if all: "?all=true" else: "")
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     let res = await docker.client.request(httpUrl, HttpGet, "", nil)
     let body = await res.body
-    result = body.fromJson(seq[Container])
+    result = body
+    # result = body.fromJson(seq[Container])
 
 proc containerCreate*(
             docker: Docker | AsyncDocker,
@@ -83,6 +86,7 @@ proc containerStart*(
             id: string, # name or id
             options = ContainerStartOptions(detatchKeys: "ctrl-c")
         ): Future[string] {.multisync.} =
+
     let httpPath = "/containers/" & id & "/start"
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     let res = await docker.client.request(
