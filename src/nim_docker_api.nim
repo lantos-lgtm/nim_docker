@@ -8,13 +8,9 @@ import
     tables,
     jsony,
     options,
-    threadpool,
-    httpclient,
-    async,
-    os,
-    random,
-    weave
-export types, client, tables, jsony, options, threadpool
+    asyncdispatch
+
+export types, client, tables, jsony, options
 
 
 
@@ -22,15 +18,10 @@ export types, client, tables, jsony, options, threadpool
 
 
 proc main*() =
-    # var path = "/var/run/docker.sock"
-    # var s = newSocket(Domain.AF_UNIX, SockType.SOCK_STREAM, Protocol.IPPROTO_IP)
-    # defer: s.close()
-    # s.connectUnix(path)
-    # s.send("GET /containers/json HTTP/1.1\r\n\r\n")
 
-    # var docker = initDocker("unix:///var/run/docker.sock")
-    var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
-    echo docker.containers(all=true).toJson()
+    var docker = initDocker("unix:///var/run/docker.sock")
+    # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
+    echo docker.containers(all=true)
 
     let containerConfig = ContainerConfig(
         image: "nginx:alpine",
@@ -40,83 +31,56 @@ proc main*() =
         hostConfig: (HostConfig(
             portBindings: some({
                 "80/tcp": (@[
-                    {"HostPort":"8080"}.newTable()[]
+                    {"HostPort":"8081"}.newTable()[]
                 ])
             }.newTable()[])
         ))
     )
+    let containerName = "myContainer0"
     # stopping existing container
-    echo docker.containerStop("myContainer")
+    echo docker.containerStop(containerName)
     # removing existing container
-    echo docker.containerRemove("myContainer")
+    echo docker.containerRemove(containerName)
     # creating new container
-    echo docker.containerCreate("myContainer", containerConfig)
+    echo docker.containerCreate(containerName, containerConfig)
     # starting new container
-    echo docker.containerStart("myContainer")
+    echo docker.containerStart(containerName)
 
+proc mainAsync*() {.async.}=
 
-    # getting stats from container (with threads)
-    # 1. create a channel to pass info between threads
-    # 2. create a thread function to read from the channel
-    # 3. create a callback function to write to the channel from libcurl
-    # 4. spawn a thread to run libcurl in
-    # 5. spawn a thread to run the thread function in
-    # 6. wait for the threads to finish
+    var docker = initAsyncDocker("unix:///var/run/docker.sock")
+    # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
+    echo (await docker.containers(all=true))
 
-    type
-        MyCallbackDataRef = ref object
-            channel: Channel[string]
-        
-    proc echoThread(myCallbackDataRef: MyCallbackDataRef) {.thread.} =
-        while true:
-            var channelRes = myCallbackDataRef[].channel.tryRecv()
-            if channelRes.dataAvailable:
-                # echo channelRes.msg
-                let containerStats = channelRes.msg.fromJson(ContainerStats)
-                echo containerStats.getHumanReadableStats()
+    let containerConfig = ContainerConfig(
+        image: "nginx:alpine",
+        exposedPorts: some({
+            "80/tcp": none(Table[string,string])
+        }.newTable()[]),
+        hostConfig: (HostConfig(
+            portBindings: some({
+                "80/tcp": (@[
+                    {"HostPort":"8082"}.newTable()[]
+                ])
+            }.newTable()[])
+        ))
+    )
+    let containerName = "myContainer0Async"
+    # stopping existing container
+    echo await docker.containerStop(containerName)
+    # removing existing container
+    echo await docker.containerRemove(containerName)
+    # creating new container
+    echo await docker.containerCreate(containerName, containerConfig)
+    # starting new container
+    echo await docker.containerStart(containerName)
 
-
-    proc curlWriteFn(
-            buffer: cstring,
-            size: int,
-            count: int,
-            outstream: pointer
-        ): int =
-        var myCallbackDataRef = cast[MyCallbackDataRef](outstream)
-        myCallbackDataRef.channel.send($buffer)
-        result = size * count
-
-    var myCallbackDataRef = MyCallbackDataRef()
-    myCallbackDataRef[].channel.open()
-
-    discard spawn docker.containerStats("myContainer", 
-        ContainerStatsOptions(
-            stream: true,
-            oneShot: false
-        ),
-        curlWriteFn,
-        myCallbackDataRef[].unsafeAddr
-      )
-
-    spawn echoThread(myCallbackDataRef)
-
-    sync()
-    
-
-proc spam(threadId: int) =
-    sleep(random.rand(5000))
-    echo "spawning threadId: " & $threadId
-    var i = 0
-    var client = newHttpClient()
-    while true:
-        let res = client.get("http://192.168.1.210:8080")
-        i.inc()
-        if i mod 100 == 0:
-            echo "threadId: " & $threadId & " polls:" & $i & " res: " & $res.code()
 
 
 when isMainModule:
     main()
+    waitFor mainAsync()
+    # runForever()
     # for i in 1..20:
     #     spawn spam(i)
     # sync()
