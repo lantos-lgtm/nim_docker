@@ -65,10 +65,11 @@ runnableExamples("-r:off"):
   let socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
   socket.sendTo("192.168.0.1", Port(27960), "status\n")
 
-runnableExamples("-r:off"):
-  let socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
-  let ip = parseIpAddress("192.168.0.1")
-  doAssert socket.sendTo(ip, Port(27960), "status\c\l") == 8
+when defined(zephyr):
+  runnableExamples("-r:off"):
+    let socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+    let ip = parseIpAddress("192.168.0.1")
+    doAssert socket.sendTo(ip, Port(27960), "status\c\l") == 8
 
 ## Creating a server
 ## -----------------
@@ -453,8 +454,8 @@ proc parseIPv6Address(addressStr: string): IpAddress =
 proc parseIpAddress*(addressStr: string): IpAddress =
   ## Parses an IP address
   ##
-  ## Raises ValueError on error. 
-  ## 
+  ## Raises ValueError on error.
+  ##
   ## For IPv4 addresses, only the strict form as
   ## defined in RFC 6943 is considered valid, see
   ## https://datatracker.ietf.org/doc/html/rfc6943#section-3.1.1.
@@ -680,8 +681,7 @@ when defineSsl:
           # Scan for certs in known locations. For CVerifyPeerUseEnvVars also scan
           # the SSL_CERT_FILE and SSL_CERT_DIR env vars
           var found = false
-          let useEnvVars = (if verifyMode == CVerifyPeerUseEnvVars: true else: false)
-          for fn in scanSSLCertificates(useEnvVars = useEnvVars):
+          for fn in scanSSLCertificates():
             if newCTX.SSL_CTX_load_verify_locations(fn, nil) == VerifySuccess:
               found = true
               break
@@ -984,11 +984,11 @@ proc bindAddr*(socket: Socket, port = Port(0), address = "") {.
 
   var aiList = getAddrInfo(realaddr, port, socket.domain)
   if bindAddr(socket.fd, aiList.ai_addr, aiList.ai_addrlen.SockLen) < 0'i32:
-    freeAddrInfo(aiList)
+    freeaddrinfo(aiList)
     var address2: string
     address2.addQuoted address
     raiseOSError(osLastError(), "address: $# port: $#" % [address2, $port])
-  freeAddrInfo(aiList)
+  freeaddrinfo(aiList)
 
 proc acceptAddr*(server: Socket, client: var owned(Socket), address: var string,
                  flags = {SocketFlag.SafeDisconn},
@@ -1275,7 +1275,7 @@ when defined(nimdoc) or (defined(posix) and not useNimNetLite):
     when not defined(nimdoc):
       var socketAddr = makeUnixAddr(path)
       if socket.fd.connect(cast[ptr SockAddr](addr socketAddr),
-          (sizeof(socketAddr.sun_family) + path.len).SockLen) != 0'i32:
+          (sizeof(socketAddr)).SockLen) != 0'i32:
         raiseOSError(osLastError())
 
   proc bindUnix*(socket: Socket, path: string) =
@@ -1284,7 +1284,7 @@ when defined(nimdoc) or (defined(posix) and not useNimNetLite):
     when not defined(nimdoc):
       var socketAddr = makeUnixAddr(path)
       if socket.fd.bindAddr(cast[ptr SockAddr](addr socketAddr),
-          (sizeof(socketAddr.sun_family) + path.len).SockLen) != 0'i32:
+          (sizeof(socketAddr)).SockLen) != 0'i32:
         raiseOSError(osLastError())
 
 when defined(ssl):
@@ -1613,53 +1613,98 @@ proc recvLine*(socket: Socket, timeout = -1,
   result = ""
   readLine(socket, result, timeout, flags, maxLength)
 
-proc recvFrom*[T: string | IpAddress](socket: Socket, data: var string, length: int,
-               address: var T, port: var Port, flags = 0'i32): int {.
-               tags: [ReadIOEffect].} =
-  ## Receives data from `socket`. This function should normally be used with
-  ## connection-less sockets (UDP sockets). The source address of the data
-  ## packet is stored in the `address` argument as either a string or an IpAddress.
-  ##
-  ## If an error occurs an OSError exception will be raised. Otherwise the return
-  ## value will be the length of data received.
-  ##
-  ## .. warning:: This function does not yet have a buffered implementation,
-  ##   so when `socket` is buffered the non-buffered implementation will be
-  ##   used. Therefore if `socket` contains something in its buffer this
-  ##   function will make no effort to return it.
-  template adaptRecvFromToDomain(sockAddress: untyped, domain: Domain) =
-    var addrLen = SockLen(sizeof(sockAddress))
-    result = recvfrom(socket.fd, cstring(data), length.cint, flags.cint,
-                      cast[ptr SockAddr](addr(sockAddress)), addr(addrLen))
 
-    if result != -1:
-      data.setLen(result)
+when defined(zephyr): # this switch is done to keep Nim 1.6 API backward compatible
+  proc recvFrom*[T: string | IpAddress](socket: Socket, data: var string, length: int,
+                address: var T, port: var Port, flags = 0'i32): int {.
+                tags: [ReadIOEffect].} =
+    ## Receives data from `socket`. This function should normally be used with
+    ## connection-less sockets (UDP sockets). The source address of the data
+    ## packet is stored in the `address` argument as either a string or an IpAddress.
+    ##
+    ## If an error occurs an OSError exception will be raised. Otherwise the return
+    ## value will be the length of data received.
+    ##
+    ## .. warning:: This function does not yet have a buffered implementation,
+    ##   so when `socket` is buffered the non-buffered implementation will be
+    ##   used. Therefore if `socket` contains something in its buffer this
+    ##   function will make no effort to return it.
+    template adaptRecvFromToDomain(sockAddress: untyped, domain: Domain) =
+      var addrLen = sizeof(sockAddress).SockLen
+      result = recvfrom(socket.fd, cstring(data), length.cint, flags.cint,
+                        cast[ptr SockAddr](addr(sockAddress)), addr(addrLen))
 
-      when typeof(address) is string:
+      if result != -1:
+        data.setLen(result)
+
+        when typeof(address) is string:
+          address = getAddrString(cast[ptr SockAddr](addr(sockAddress)))
+          when domain == AF_INET6:
+            port = ntohs(sockAddress.sin6_port).Port
+          else:
+            port = ntohs(sockAddress.sin_port).Port
+        else:
+          data.setLen(result)
+          sockAddress.fromSockAddr(addrLen, address, port)
+      else:
+        raiseOSError(osLastError())
+
+    assert(socket.protocol != IPPROTO_TCP, "Cannot `recvFrom` on a TCP socket")
+    # TODO: Buffered sockets
+    data.setLen(length)
+
+    case socket.domain
+    of AF_INET6:
+      var sockAddress: Sockaddr_in6
+      adaptRecvFromToDomain(sockAddress, AF_INET6)
+    of AF_INET:
+      var sockAddress: Sockaddr_in
+      adaptRecvFromToDomain(sockAddress, AF_INET)
+    else:
+      raise newException(ValueError, "Unknown socket address family")
+
+else:
+  proc recvFrom*(socket: Socket, data: var string, length: int,
+                address: var string, port: var Port, flags = 0'i32): int {.
+                tags: [ReadIOEffect].} =
+    ## Receives data from `socket`. This function should normally be used with
+    ## connection-less sockets (UDP sockets).
+    ##
+    ## If an error occurs an OSError exception will be raised. Otherwise the return
+    ## value will be the length of data received.
+    ##
+    ## .. warning:: This function does not yet have a buffered implementation,
+    ##   so when `socket` is buffered the non-buffered implementation will be
+    ##   used. Therefore if `socket` contains something in its buffer this
+    ##   function will make no effort to return it.
+    template adaptRecvFromToDomain(domain: Domain) =
+      var addrLen = SockLen(sizeof(sockAddress))
+      result = recvfrom(socket.fd, cstring(data), length.cint, flags.cint,
+                        cast[ptr SockAddr](addr(sockAddress)), addr(addrLen))
+
+      if result != -1:
+        data.setLen(result)
         address = getAddrString(cast[ptr SockAddr](addr(sockAddress)))
         when domain == AF_INET6:
           port = ntohs(sockAddress.sin6_port).Port
         else:
           port = ntohs(sockAddress.sin_port).Port
       else:
-        data.setLen(result)
-        sockAddress.fromSockAddr(addrLen, address, port)
+        raiseOSError(osLastError())
+
+    assert(socket.protocol != IPPROTO_TCP, "Cannot `recvFrom` on a TCP socket")
+    # TODO: Buffered sockets
+    data.setLen(length)
+    case socket.domain
+    of AF_INET6:
+      var sockAddress: Sockaddr_in6
+      adaptRecvFromToDomain(AF_INET6)
+    of AF_INET:
+      var sockAddress: Sockaddr_in
+      adaptRecvFromToDomain(AF_INET)
     else:
-      raiseOSError(osLastError())
+      raise newException(ValueError, "Unknown socket address family")
 
-  assert(socket.protocol != IPPROTO_TCP, "Cannot `recvFrom` on a TCP socket")
-  # TODO: Buffered sockets
-  data.setLen(length)
-
-  case socket.domain
-  of AF_INET6:
-    var sockAddress: Sockaddr_in6
-    adaptRecvFromToDomain(sockAddress, AF_INET6)
-  of AF_INET:
-    var sockAddress: Sockaddr_in
-    adaptRecvFromToDomain(sockAddress, AF_INET)
-  else:
-    raise newException(ValueError, "Unknown socket address family")
 
 proc skip*(socket: Socket, size: int, timeout = -1) =
   ## Skips `size` amount of bytes.
@@ -1745,7 +1790,7 @@ proc sendTo*(socket: Socket, address: string, port: Port, data: pointer,
     it = it.ai_next
 
   let osError = osLastError()
-  freeAddrInfo(aiList)
+  freeaddrinfo(aiList)
 
   if not success:
     raiseOSError(osError)
@@ -1755,7 +1800,7 @@ proc sendTo*(socket: Socket, address: string, port: Port,
   ## This proc sends `data` to the specified `address`,
   ## which may be an IP address or a hostname, if a hostname is specified
   ## this function will try each IP of that hostname.
-  ## 
+  ##
   ## Generally for use with connection-less (UDP) sockets.
   ##
   ## If an error occurs an OSError exception will be raised.
@@ -1763,29 +1808,30 @@ proc sendTo*(socket: Socket, address: string, port: Port,
   ## This is the high-level version of the above `sendTo` function.
   socket.sendTo(address, port, cstring(data), data.len, socket.domain)
 
-proc sendTo*(socket: Socket, address: IpAddress, port: Port,
-             data: string, flags = 0'i32): int {.
-              discardable, tags: [WriteIOEffect].} =
-  ## This proc sends `data` to the specified `IpAddress` and returns
-  ## the number of bytes written. 
-  ##
-  ## Generally for use with connection-less (UDP) sockets. 
-  ##
-  ## If an error occurs an OSError exception will be raised.
-  ##
-  ## This is the high-level version of the above `sendTo` function.
-  assert(socket.protocol != IPPROTO_TCP, "Cannot `sendTo` on a TCP socket")
-  assert(not socket.isClosed, "Cannot `sendTo` on a closed socket")
+when defined(zephyr):
+  proc sendTo*(socket: Socket, address: IpAddress, port: Port,
+              data: string, flags = 0'i32): int {.
+                discardable, tags: [WriteIOEffect].} =
+    ## This proc sends `data` to the specified `IpAddress` and returns
+    ## the number of bytes written.
+    ##
+    ## Generally for use with connection-less (UDP) sockets.
+    ##
+    ## If an error occurs an OSError exception will be raised.
+    ##
+    ## This is the high-level version of the above `sendTo` function.
+    assert(socket.protocol != IPPROTO_TCP, "Cannot `sendTo` on a TCP socket")
+    assert(not socket.isClosed, "Cannot `sendTo` on a closed socket")
 
-  var sa: Sockaddr_storage
-  var sl: SockLen
-  toSockAddr(address, port, sa, sl)
-  result = sendto(socket.fd, cstring(data), data.len().cint, flags.cint,
-                  cast[ptr SockAddr](addr sa), sl)
+    var sa: Sockaddr_storage
+    var sl: SockLen
+    toSockAddr(address, port, sa, sl)
+    result = sendto(socket.fd, cstring(data), data.len().cint, flags.cint,
+                    cast[ptr SockAddr](addr sa), sl)
 
-  if result == -1'i32:
-    let osError = osLastError()
-    raiseOSError(osError)
+    if result == -1'i32:
+      let osError = osLastError()
+      raiseOSError(osError)
 
 
 proc isSsl*(socket: Socket): bool =
@@ -1960,7 +2006,7 @@ proc dial*(address: string, port: Port,
         # network system problem (e.g. not enough FDs), and not an unreachable
         # address.
         let err = osLastError()
-        freeAddrInfo(aiList)
+        freeaddrinfo(aiList)
         closeUnusedFds()
         raiseOSError(err)
       fdPerDomain[ord(domain)] = lastFd
@@ -1969,7 +2015,7 @@ proc dial*(address: string, port: Port,
       break
     lastError = osLastError()
     it = it.ai_next
-  freeAddrInfo(aiList)
+  freeaddrinfo(aiList)
   closeUnusedFds(ord(domain))
 
   if success:
@@ -1999,7 +2045,7 @@ proc connect*(socket: Socket, address: string,
     else: lastError = osLastError()
     it = it.ai_next
 
-  freeAddrInfo(aiList)
+  freeaddrinfo(aiList)
   if not success: raiseOSError(lastError)
 
   when defineSsl:
@@ -2051,7 +2097,7 @@ proc connectAsync(socket: Socket, name: string, port = Port(0),
 
     it = it.ai_next
 
-  freeAddrInfo(aiList)
+  freeaddrinfo(aiList)
   if not success: raiseOSError(lastError)
 
 proc connect*(socket: Socket, address: string, port = Port(0),

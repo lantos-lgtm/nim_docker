@@ -648,9 +648,9 @@ proc bindAddr*(socket: AsyncSocket, port = Port(0), address = "") {.
 
   var aiList = getAddrInfo(realaddr, port, socket.domain)
   if bindAddr(socket.fd, aiList.ai_addr, aiList.ai_addrlen.SockLen) < 0'i32:
-    freeAddrInfo(aiList)
+    freeaddrinfo(aiList)
     raiseOSError(osLastError())
-  freeAddrInfo(aiList)
+  freeaddrinfo(aiList)
 
 proc hasDataBuffered*(s: AsyncSocket): bool {.since: (1, 5).} =
   ## Determines whether an AsyncSocket has data buffered.
@@ -679,7 +679,7 @@ when defined(posix) and not useNimNetLite:
 
       var socketAddr = makeUnixAddr(path)
       let ret = socket.fd.connect(cast[ptr SockAddr](addr socketAddr),
-                        (sizeof(socketAddr.sun_family) + path.len).SockLen)
+                        (sizeof(socketAddr)).SockLen)
       if ret == 0:
         # Request to connect completed immediately.
         retFuture.complete()
@@ -697,7 +697,7 @@ when defined(posix) and not useNimNetLite:
     when not defined(nimdoc):
       var socketAddr = makeUnixAddr(path)
       if socket.fd.bindAddr(cast[ptr SockAddr](addr socketAddr),
-          (sizeof(socketAddr.sun_family) + path.len).SockLen) != 0'i32:
+          (sizeof(socketAddr)).SockLen) != 0'i32:
         raiseOSError(osLastError())
 
 elif defined(nimdoc):
@@ -859,7 +859,7 @@ proc sendTo*(socket: AsyncSocket, address: string, port: Port, data: string,
 
     it = it.ai_next
 
-  freeAddrInfo(aiList)
+  freeaddrinfo(aiList)
 
   if not success:
     if lastException != nil:
