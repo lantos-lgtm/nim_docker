@@ -8,13 +8,12 @@ import
     tables,
     jsony,
     options,
-    threadpool,
     httpclient,
-    async,
     os,
     random,
-    weave
-export types, client, tables, jsony, options, threadpool
+    taskpools
+
+export types, client, tables, jsony, options
 
 
 
@@ -28,8 +27,8 @@ proc main*() =
     # s.connectUnix(path)
     # s.send("GET /containers/json HTTP/1.1\r\n\r\n")
 
-    # var docker = initDocker("unix:///var/run/docker.sock")
-    var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
+    var docker = initDocker("unix:///var/run/docker.sock")
+    # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
     echo docker.containers(all=true).toJson()
 
     let containerConfig = ContainerConfig(
@@ -40,19 +39,20 @@ proc main*() =
         hostConfig: (HostConfig(
             portBindings: some({
                 "80/tcp": (@[
-                    {"HostPort":"8080"}.newTable()[]
+                    {"HostPort":"8081"}.newTable()[]
                 ])
             }.newTable()[])
         ))
     )
+    let containerName = "myContainer1"
     # stopping existing container
-    echo docker.containerStop("myContainer")
+    echo docker.containerStop(containerName)
     # removing existing container
-    echo docker.containerRemove("myContainer")
+    echo docker.containerRemove(containerName)
     # creating new container
-    echo docker.containerCreate("myContainer", containerConfig)
+    echo docker.containerCreate(containerName, containerConfig)
     # starting new container
-    echo docker.containerStart("myContainer")
+    echo docker.containerStart(containerName)
 
 
     # getting stats from container (with threads)
@@ -89,18 +89,19 @@ proc main*() =
     var myCallbackDataRef = MyCallbackDataRef()
     myCallbackDataRef[].channel.open()
 
-    discard spawn docker.containerStats("myContainer", 
-        ContainerStatsOptions(
-            stream: true,
-            oneShot: false
-        ),
-        curlWriteFn,
-        myCallbackDataRef[].unsafeAddr
-      )
+    # discard spawn docker.containerStats(
+    #     containerName,
+    #     ContainerStatsOptions(
+    #         stream: true,
+    #         oneShot: false
+    #     ),
+    #     curlWriteFn,
+    #     myCallbackDataRef[].unsafeAddr
+    #   )
 
-    spawn echoThread(myCallbackDataRef)
+    # spawn echoThread(myCallbackDataRef)
 
-    sync()
+    # sync()
     
 
 proc spam(threadId: int) =

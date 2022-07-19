@@ -1,4 +1,4 @@
-import 
+import
     ./types,
     httpClient,
     jsony,
@@ -13,11 +13,11 @@ proc initDocker*(baseUrl: string): Docker =
     result.version = "v1.41"
 
 
-type CurlWriteFnHandle* = proc (   
+type CurlWriteFnHandle* = proc (
                 buffer: cstring,
                 size: int,
                 count: int,
-                outstream: pointer): int {. gcsafe, locks: 0.}
+                outstream: pointer): int {.gcsafe, locks: 0.}
 
 proc defaultCurlWriteFn(
         buffer: cstring,
@@ -37,8 +37,10 @@ proc request*(
             body: string,
             multipartData: MultipartData,
             useCurl: bool = false,
-            headers: HttpHeaders = newHttpHeaders({"Accept": "application/json",
-                "Content-Type": "application/json"}),
+            headers: HttpHeaders = newHttpHeaders({
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                }),
             curlWriteFn: CurlWriteFnHandle = defaultCurlWriteFn,
             curlWriteDataPtr: pointer = nil
         ): string =
@@ -47,11 +49,11 @@ proc request*(
 
         let useUnix = docker.baseUrl.startsWith("unix://")
         if useCurl or useUnix:
-            # this weird pattern is done to allow higher functions to pass the pointer 
+            # this weird pattern is done to allow higher functions to pass the pointer
             # to a ref object that can be assigned to in the curlWriteFn function
-            
+
             let webData: ref string = new string
-            var tempCurlWriteDataPtr = curlWriteDataPtr 
+            var tempCurlWriteDataPtr = curlWriteDataPtr
             if tempCurlWriteDataPtr.isNil:
                 tempCurlWriteDataPtr = webData[].addr
 
@@ -145,10 +147,10 @@ proc containerStart*(
             httpUrl,
             HttpMethod.HttpPost,
             # options.toJson(),
-            "",
-            nil,
-            false
-        )
+        "",
+        nil,
+        false
+    )
     res
 
 proc containerStop*(
@@ -186,7 +188,7 @@ proc containerRestart*(
 proc containerRemove*(
             docker: Docker,
             id: string, # name or id
-            options =  ContainerRemoveOptions(v: true, force: true, link: true)
+            options = ContainerRemoveOptions(v: true, force: true, link: true)
         ): string =
     let httpPath = "/containers/" & id
     let httpUrl = docker.version & httpPath
@@ -216,23 +218,25 @@ proc containerStats*(
             options.toJson(),
             nil,
             false,
-            curlWriteFn=curlWriteFn,
-            curlWriteDataPtr=curlWriteDataPtr
+            curlWriteFn = curlWriteFn,
+            curlWriteDataPtr = curlWriteDataPtr
         )
     res
 
 
 proc calculateCPUPercentUNIX(stats: ContainerStats): float64 =
-    var 
+    var
         cpuPercent = 0.0
         # calculate the change for the cpu usage of the container in between readings
-        cpuDelta = float64(stats.cpuStats.cpuUsage.totalUsage - stats.preCpuStats.cpuUsage.totalUsage)
+        cpuDelta = float64(stats.cpuStats.cpuUsage.totalUsage -
+                stats.preCpuStats.cpuUsage.totalUsage)
         # calculate the change for the entire system between readings
-        systemDelta = float64(stats.cpuStats.systemCpuUsage - stats.preCpuStats.systemCpuUsage)
-        onlineCPUs  = float64(stats.cpuStats.onlineCpus)
+        systemDelta = float64(stats.cpuStats.systemCpuUsage -
+                stats.preCpuStats.systemCpuUsage)
+        onlineCPUs = float64(stats.cpuStats.onlineCpus)
 
 
-    if onlineCPUs == 0.0: 
+    if onlineCPUs == 0.0:
         onlineCPUs = float64(len(stats.cpuStats.cpuUsage.perCpuUsage))
 
     if systemDelta > 0.0 and cpuDelta > 0.0:
@@ -256,15 +260,21 @@ proc getHumanReadableStats*(stats: ContainerStats): HumanReadableStats =
         result.usedMemory = stats.memoryStats.usage - stats.memoryStats.stats["cache"]
     except:
         try:
-            result.usedMemory = stats.memoryStats.usage - stats.memoryStats.stats["total_inactive_file"]
+            result.usedMemory = stats.memoryStats.usage -
+                    stats.memoryStats.stats["total_inactive_file"]
         except:
-            result.usedMemory = stats.memoryStats.usage - stats.memoryStats.stats["inactive_file"]
+            result.usedMemory = stats.memoryStats.usage -
+                    stats.memoryStats.stats["inactive_file"]
 
     result.availableMemory = stats.memoryStats.limit
-    result.memoryUsagePercent = (float(result.usedMemory) / float(result.availableMemory)) * 100.0
-    result.cpuDelta = stats.cpuStats.cpuUsage.totalUsage - stats.preCpuStats.cpuUsage.totalUsage
-    result.systemCpuDelta = stats.cpuStats.systemCpuUsage - stats.preCpuStats.systemCpuUsage
-    result.numberCpus = len(stats.cpuStats.cpuUsage.percpuUsage) or stats.cpuStats.onlineCpus
+    result.memoryUsagePercent = (float(result.usedMemory) / float(
+            result.availableMemory)) * 100.0
+    result.cpuDelta = stats.cpuStats.cpuUsage.totalUsage -
+            stats.preCpuStats.cpuUsage.totalUsage
+    result.systemCpuDelta = stats.cpuStats.systemCpuUsage -
+            stats.preCpuStats.systemCpuUsage
+    result.numberCpus = len(stats.cpuStats.cpuUsage.percpuUsage) or
+            stats.cpuStats.onlineCpus
     # unix and windows have two different ways of calculating cpu usage. We need to handle both.
 
     result.cpuUsagePercent = stats.calculateCPUPercentUNIX()
