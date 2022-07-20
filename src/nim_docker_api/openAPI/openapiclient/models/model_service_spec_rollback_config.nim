@@ -11,13 +11,21 @@
 #import tables
 
 
+# type FailureAction* {.pure.} = enum
+#   Continue
+#   Pause
+
+# type Order* {.pure.} = enum
+#   StopFirst
+#   StartFirst
+
 type FailureAction* {.pure.} = enum
-  Continue
-  Pause
+  Continue = "continue"
+  Pause = "pause"
 
 type Order* {.pure.} = enum
-  StopFirst
-  StartFirst
+  StopFirst = "stop-first"
+  StartFirst "start-first"
 
 type ServiceSpecRollbackConfig* = object
   ## Specification for the rollback strategy of the service.
@@ -28,26 +36,26 @@ type ServiceSpecRollbackConfig* = object
   maxFailureRatio*: float ## The fraction of tasks that may fail during a rollback before the failure action is invoked, specified as a floating point number between 0 and 1. 
   order*: Order ## The order of operations when rolling back a task. Either the old task is shut down before the new task is started, or the new task is started before the old task is shut down. 
 
-func `%`*(v: FailureAction): JsonNode =
-  let str = case v:
-    of FailureAction.Continue: "continue"
-    of FailureAction.Pause: "pause"
+# func `%`*(v: FailureAction): JsonNode =
+#   let str = case v:
+#     of FailureAction.Continue: "continue"
+#     of FailureAction.Pause: "pause"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: FailureAction): string =
-  result = case v:
-    of FailureAction.Continue: "continue"
-    of FailureAction.Pause: "pause"
+# func `$`*(v: FailureAction): string =
+#   result = case v:
+#     of FailureAction.Continue: "continue"
+#     of FailureAction.Pause: "pause"
 
-func `%`*(v: Order): JsonNode =
-  let str = case v:
-    of Order.StopFirst: "stop-first"
-    of Order.StartFirst: "start-first"
+# func `%`*(v: Order): JsonNode =
+#   let str = case v:
+#     of Order.StopFirst: "stop-first"
+#     of Order.StartFirst: "start-first"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Order): string =
-  result = case v:
-    of Order.StopFirst: "stop-first"
-    of Order.StartFirst: "start-first"
+# func `$`*(v: Order): string =
+#   result = case v:
+#     of Order.StopFirst: "stop-first"
+#     of Order.StartFirst: "start-first"

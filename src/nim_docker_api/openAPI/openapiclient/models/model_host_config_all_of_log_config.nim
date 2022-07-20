@@ -13,44 +13,57 @@
 #import model_map
 import tables
 
+# type `Type`* {.pure.} = enum
+#   JsonFile
+#   Syslog
+#   Journald
+#   Gelf
+#   Fluentd
+#   Awslogs
+#   Splunk
+#   Etwlogs
+#   None
+
+
 type `Type`* {.pure.} = enum
-  JsonFile
-  Syslog
-  Journald
-  Gelf
-  Fluentd
-  Awslogs
-  Splunk
-  Etwlogs
-  None
+  JsonFile = "json-file"
+  Syslog = "syslog"
+  Journald = "journald"
+  Gelf = "gelf"
+  Fluentd = "fluentd"
+  Awslogs = "awslogs"
+  Splunk = "splunk"
+  Etwlogs = "etwlogs"
+  None = "none"
+
 
 type HostConfigAllOfLogConfig* = object
   ## The logging configuration for this container
   `type`*: `Type`
   config*: Table[string, string]
 
-func `%`*(v: `Type`): JsonNode =
-  let str = case v:
-    of `Type`.JsonFile: "json-file"
-    of `Type`.Syslog: "syslog"
-    of `Type`.Journald: "journald"
-    of `Type`.Gelf: "gelf"
-    of `Type`.Fluentd: "fluentd"
-    of `Type`.Awslogs: "awslogs"
-    of `Type`.Splunk: "splunk"
-    of `Type`.Etwlogs: "etwlogs"
-    of `Type`.None: "none"
+# func `%`*(v: `Type`): JsonNode =
+#   let str = case v:
+#     of `Type`.JsonFile: "json-file"
+#     of `Type`.Syslog: "syslog"
+#     of `Type`.Journald: "journald"
+#     of `Type`.Gelf: "gelf"
+#     of `Type`.Fluentd: "fluentd"
+#     of `Type`.Awslogs: "awslogs"
+#     of `Type`.Splunk: "splunk"
+#     of `Type`.Etwlogs: "etwlogs"
+#     of `Type`.None: "none"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: `Type`): string =
-  result = case v:
-    of `Type`.JsonFile: "json-file"
-    of `Type`.Syslog: "syslog"
-    of `Type`.Journald: "journald"
-    of `Type`.Gelf: "gelf"
-    of `Type`.Fluentd: "fluentd"
-    of `Type`.Awslogs: "awslogs"
-    of `Type`.Splunk: "splunk"
-    of `Type`.Etwlogs: "etwlogs"
-    of `Type`.None: "none"
+# func `$`*(v: `Type`): string =
+#   result = case v:
+#     of `Type`.JsonFile: "json-file"
+#     of `Type`.Syslog: "syslog"
+#     of `Type`.Journald: "journald"
+#     of `Type`.Gelf: "gelf"
+#     of `Type`.Fluentd: "fluentd"
+#     of `Type`.Awslogs: "awslogs"
+#     of `Type`.Splunk: "splunk"
+#     of `Type`.Etwlogs: "etwlogs"
+#     of `Type`.None: "none"

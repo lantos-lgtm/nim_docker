@@ -13,8 +13,11 @@
 #import model_map
 import tables
 
+# type Protocol* {.pure.} = enum
+#   Cfssl
+
 type Protocol* {.pure.} = enum
-  Cfssl
+  Cfssl = "cfssl"
 
 type SwarmSpecCAConfigExternalCAsInner* = object
   ## 
@@ -23,12 +26,12 @@ type SwarmSpecCAConfigExternalCAsInner* = object
   options*: Table[string, string] ## An object with key/value pairs that are interpreted as protocol-specific options for the external CA driver. 
   cACert*: string ## The root CA certificate (in PEM format) this external CA uses to issue TLS certificates (assumed to be to the current swarm root CA certificate if not provided). 
 
-func `%`*(v: Protocol): JsonNode =
-  let str = case v:
-    of Protocol.Cfssl: "cfssl"
+# func `%`*(v: Protocol): JsonNode =
+#   let str = case v:
+#     of Protocol.Cfssl: "cfssl"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Protocol): string =
-  result = case v:
-    of Protocol.Cfssl: "cfssl"
+# func `$`*(v: Protocol): string =
+#   result = case v:
+#     of Protocol.Cfssl: "cfssl"

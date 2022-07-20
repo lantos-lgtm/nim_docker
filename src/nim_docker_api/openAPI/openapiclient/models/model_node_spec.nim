@@ -13,14 +13,24 @@
 #import model_map
 import tables
 
+# type Role* {.pure.} = enum
+#   Worker
+#   Manager
+
+# type Availability* {.pure.} = enum
+#   Active
+#   Pause
+#   Drain
+
 type Role* {.pure.} = enum
-  Worker
-  Manager
+  Worker = "worker"
+  Manager = "manager"
 
 type Availability* {.pure.} = enum
-  Active
-  Pause
-  Drain
+  Active = "active"
+  Pause = "pause"
+  Drain = "drain"
+
 
 type NodeSpec* = object
   ## 
@@ -29,28 +39,28 @@ type NodeSpec* = object
   role*: Role ## Role of the node.
   availability*: Availability ## Availability of the node.
 
-func `%`*(v: Role): JsonNode =
-  let str = case v:
-    of Role.Worker: "worker"
-    of Role.Manager: "manager"
+# func `%`*(v: Role): JsonNode =
+#   let str = case v:
+#     of Role.Worker: "worker"
+#     of Role.Manager: "manager"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Role): string =
-  result = case v:
-    of Role.Worker: "worker"
-    of Role.Manager: "manager"
+# func `$`*(v: Role): string =
+#   result = case v:
+#     of Role.Worker: "worker"
+#     of Role.Manager: "manager"
 
-func `%`*(v: Availability): JsonNode =
-  let str = case v:
-    of Availability.Active: "active"
-    of Availability.Pause: "pause"
-    of Availability.Drain: "drain"
+# func `%`*(v: Availability): JsonNode =
+#   let str = case v:
+#     of Availability.Active: "active"
+#     of Availability.Pause: "pause"
+#     of Availability.Drain: "drain"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Availability): string =
-  result = case v:
-    of Availability.Active: "active"
-    of Availability.Pause: "pause"
-    of Availability.Drain: "drain"
+# func `$`*(v: Availability): string =
+#   result = case v:
+#     of Availability.Active: "active"
+#     of Availability.Pause: "pause"
+#     of Availability.Drain: "drain"

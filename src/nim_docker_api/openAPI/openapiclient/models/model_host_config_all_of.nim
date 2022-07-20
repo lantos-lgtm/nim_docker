@@ -17,14 +17,23 @@ import model_mount
 import model_port_binding
 import model_restart_policy
 
+# type CgroupnsMode* {.pure.} = enum
+#   Private
+#   Host
+
+# type Isolation* {.pure.} = enum
+#   Default
+#   Process
+#   Hyperv
+
 type CgroupnsMode* {.pure.} = enum
-  Private
-  Host
+  Private = "private"
+  Host = "host"
 
 type Isolation* {.pure.} = enum
-  Default
-  Process
-  Hyperv
+  Default = "default"
+  Process = "process"
+  Hyperv = "hyperv"
 
 type HostConfigAllOf* = object
   ## 
@@ -67,28 +76,28 @@ type HostConfigAllOf* = object
   maskedPaths*: seq[string] ## The list of paths to be masked inside the container (this overrides the default set of paths). 
   readonlyPaths*: seq[string] ## The list of paths to be set as read-only inside the container (this overrides the default set of paths). 
 
-func `%`*(v: CgroupnsMode): JsonNode =
-  let str = case v:
-    of CgroupnsMode.Private: "private"
-    of CgroupnsMode.Host: "host"
+# func `%`*(v: CgroupnsMode): JsonNode =
+#   let str = case v:
+#     of CgroupnsMode.Private: "private"
+#     of CgroupnsMode.Host: "host"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: CgroupnsMode): string =
-  result = case v:
-    of CgroupnsMode.Private: "private"
-    of CgroupnsMode.Host: "host"
+# func `$`*(v: CgroupnsMode): string =
+#   result = case v:
+#     of CgroupnsMode.Private: "private"
+#     of CgroupnsMode.Host: "host"
 
-func `%`*(v: Isolation): JsonNode =
-  let str = case v:
-    of Isolation.Default: "default"
-    of Isolation.Process: "process"
-    of Isolation.Hyperv: "hyperv"
+# func `%`*(v: Isolation): JsonNode =
+#   let str = case v:
+#     of Isolation.Default: "default"
+#     of Isolation.Process: "process"
+#     of Isolation.Hyperv: "hyperv"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Isolation): string =
-  result = case v:
-    of Isolation.Default: "default"
-    of Isolation.Process: "process"
-    of Isolation.Hyperv: "hyperv"
+# func `$`*(v: Isolation): string =
+#   result = case v:
+#     of Isolation.Default: "default"
+#     of Isolation.Process: "process"
+#     of Isolation.Hyperv: "hyperv"

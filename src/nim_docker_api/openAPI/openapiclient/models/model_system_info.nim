@@ -20,19 +20,33 @@ import model_runtime
 import model_swarm_info
 import model_system_info_default_address_pools_inner
 
+# type CgroupDriver* {.pure.} = enum
+#   Cgroupfs
+#   Systemd
+#   None
+
+# type CgroupVersion* {.pure.} = enum
+#   `1`
+#   `2`
+
+# type Isolation* {.pure.} = enum
+#   Default
+#   Hyperv
+#   Process
+
 type CgroupDriver* {.pure.} = enum
-  Cgroupfs
-  Systemd
-  None
+  Cgroupfs = "cgroupfs"
+  Systemd = "systemd"
+  None = "none"
 
 type CgroupVersion* {.pure.} = enum
-  `1`
-  `2`
+  `1` = "1"
+  `2` = "2"
 
 type Isolation* {.pure.} = enum
-  Default
-  Hyperv
-  Process
+  Default = "default"
+  Hyperv = "hyperv"
+  Process = "process"
 
 type SystemInfo* = object
   ## 
@@ -100,42 +114,42 @@ type SystemInfo* = object
   defaultAddressPools*: seq[SystemInfo_DefaultAddressPools_inner] ## List of custom default address pools for local networks, which can be specified in the daemon.json file or dockerd option.  Example: a Base \"10.10.0.0/16\" with Size 24 will define the set of 256 10.10.[0-255].0/24 address pools. 
   warnings*: seq[string] ## List of warnings / informational messages about missing features, or issues related to the daemon configuration.  These messages can be printed by the client as information to the user. 
 
-func `%`*(v: CgroupDriver): JsonNode =
-  let str = case v:
-    of CgroupDriver.Cgroupfs: "cgroupfs"
-    of CgroupDriver.Systemd: "systemd"
-    of CgroupDriver.None: "none"
+# func `%`*(v: CgroupDriver): JsonNode =
+#   let str = case v:
+#     of CgroupDriver.Cgroupfs: "cgroupfs"
+#     of CgroupDriver.Systemd: "systemd"
+#     of CgroupDriver.None: "none"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: CgroupDriver): string =
-  result = case v:
-    of CgroupDriver.Cgroupfs: "cgroupfs"
-    of CgroupDriver.Systemd: "systemd"
-    of CgroupDriver.None: "none"
+# func `$`*(v: CgroupDriver): string =
+#   result = case v:
+#     of CgroupDriver.Cgroupfs: "cgroupfs"
+#     of CgroupDriver.Systemd: "systemd"
+#     of CgroupDriver.None: "none"
 
-func `%`*(v: CgroupVersion): JsonNode =
-  let str = case v:
-    of CgroupVersion.`1`: "1"
-    of CgroupVersion.`2`: "2"
+# func `%`*(v: CgroupVersion): JsonNode =
+#   let str = case v:
+#     of CgroupVersion.`1`: "1"
+#     of CgroupVersion.`2`: "2"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: CgroupVersion): string =
-  result = case v:
-    of CgroupVersion.`1`: "1"
-    of CgroupVersion.`2`: "2"
+# func `$`*(v: CgroupVersion): string =
+#   result = case v:
+#     of CgroupVersion.`1`: "1"
+#     of CgroupVersion.`2`: "2"
 
-func `%`*(v: Isolation): JsonNode =
-  let str = case v:
-    of Isolation.Default: "default"
-    of Isolation.Hyperv: "hyperv"
-    of Isolation.Process: "process"
+# func `%`*(v: Isolation): JsonNode =
+#   let str = case v:
+#     of Isolation.Default: "default"
+#     of Isolation.Hyperv: "hyperv"
+#     of Isolation.Process: "process"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Isolation): string =
-  result = case v:
-    of Isolation.Default: "default"
-    of Isolation.Hyperv: "hyperv"
-    of Isolation.Process: "process"
+# func `$`*(v: Isolation): string =
+#   result = case v:
+#     of Isolation.Default: "default"
+#     of Isolation.Hyperv: "hyperv"
+#     of Isolation.Process: "process"

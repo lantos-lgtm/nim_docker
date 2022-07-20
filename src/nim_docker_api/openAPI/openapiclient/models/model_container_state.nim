@@ -12,14 +12,23 @@
 
 import model_health
 
+# type Status* {.pure.} = enum
+#   Created
+#   Running
+#   Paused
+#   Restarting
+#   Removing
+#   Exited
+#   Dead
+
 type Status* {.pure.} = enum
-  Created
-  Running
-  Paused
-  Restarting
-  Removing
-  Exited
-  Dead
+  Created = "created"
+  Running = "running"
+  Paused = "paused"
+  Restarting = "restarting"
+  Removing = "removing"
+  Exited = "exited"
+  Dead = "dead"
 
 type ContainerState* = object
   ## ContainerState stores container's running state. It's part of ContainerJSONBase and will be returned by the \"inspect\" command. 
@@ -36,24 +45,24 @@ type ContainerState* = object
   finishedAt*: string ## The time when this container last exited.
   health*: Health
 
-func `%`*(v: Status): JsonNode =
-  let str = case v:
-    of Status.Created: "created"
-    of Status.Running: "running"
-    of Status.Paused: "paused"
-    of Status.Restarting: "restarting"
-    of Status.Removing: "removing"
-    of Status.Exited: "exited"
-    of Status.Dead: "dead"
+# func `%`*(v: Status): JsonNode =
+#   let str = case v:
+#     of Status.Created: "created"
+#     of Status.Running: "running"
+#     of Status.Paused: "paused"
+#     of Status.Restarting: "restarting"
+#     of Status.Removing: "removing"
+#     of Status.Exited: "exited"
+#     of Status.Dead: "dead"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Status): string =
-  result = case v:
-    of Status.Created: "created"
-    of Status.Running: "running"
-    of Status.Paused: "paused"
-    of Status.Restarting: "restarting"
-    of Status.Removing: "removing"
-    of Status.Exited: "exited"
-    of Status.Dead: "dead"
+# func `$`*(v: Status): string =
+#   result = case v:
+#     of Status.Created: "created"
+#     of Status.Running: "running"
+#     of Status.Paused: "paused"
+#     of Status.Restarting: "restarting"
+#     of Status.Removing: "removing"
+#     of Status.Exited: "exited"
+#     of Status.Dead: "dead"

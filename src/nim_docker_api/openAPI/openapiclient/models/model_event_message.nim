@@ -12,22 +12,39 @@
 
 import model_event_actor
 
+# type `Type`* {.pure.} = enum
+#   Builder
+#   Config
+#   Container
+#   Daemon
+#   Image
+#   Network
+#   Node
+#   Plugin
+#   Secret
+#   Service
+#   Volume
+
+# type Scope* {.pure.} = enum
+#   Local
+#   Swarm
+
 type `Type`* {.pure.} = enum
-  Builder
-  Config
-  Container
-  Daemon
-  Image
-  Network
-  Node
-  Plugin
-  Secret
-  Service
-  Volume
+  Builder = "builder"
+  Config = "config"
+  Container = "container"
+  Daemon = "daemon"
+  Image = "image"
+  Network = "network"
+  Node = "node"
+  Plugin = "plugin"
+  Secret = "secret"
+  Service = "service"
+  Volume = "volume"
 
 type Scope* {.pure.} = enum
-  Local
-  Swarm
+  Local = "local"
+  Swarm = "swarm"
 
 type EventMessage* = object
   ## EventMessage represents the information an event contains. 
@@ -38,44 +55,44 @@ type EventMessage* = object
   time*: int64 ## Timestamp of event
   timeNano*: int64 ## Timestamp of event, with nanosecond accuracy
 
-func `%`*(v: `Type`): JsonNode =
-  let str = case v:
-    of `Type`.Builder: "builder"
-    of `Type`.Config: "config"
-    of `Type`.Container: "container"
-    of `Type`.Daemon: "daemon"
-    of `Type`.Image: "image"
-    of `Type`.Network: "network"
-    of `Type`.Node: "node"
-    of `Type`.Plugin: "plugin"
-    of `Type`.Secret: "secret"
-    of `Type`.Service: "service"
-    of `Type`.Volume: "volume"
+# func `%`*(v: `Type`): JsonNode =
+#   let str = case v:
+#     of `Type`.Builder: "builder"
+#     of `Type`.Config: "config"
+#     of `Type`.Container: "container"
+#     of `Type`.Daemon: "daemon"
+#     of `Type`.Image: "image"
+#     of `Type`.Network: "network"
+#     of `Type`.Node: "node"
+#     of `Type`.Plugin: "plugin"
+#     of `Type`.Secret: "secret"
+#     of `Type`.Service: "service"
+#     of `Type`.Volume: "volume"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: `Type`): string =
-  result = case v:
-    of `Type`.Builder: "builder"
-    of `Type`.Config: "config"
-    of `Type`.Container: "container"
-    of `Type`.Daemon: "daemon"
-    of `Type`.Image: "image"
-    of `Type`.Network: "network"
-    of `Type`.Node: "node"
-    of `Type`.Plugin: "plugin"
-    of `Type`.Secret: "secret"
-    of `Type`.Service: "service"
-    of `Type`.Volume: "volume"
+# func `$`*(v: `Type`): string =
+#   result = case v:
+#     of `Type`.Builder: "builder"
+#     of `Type`.Config: "config"
+#     of `Type`.Container: "container"
+#     of `Type`.Daemon: "daemon"
+#     of `Type`.Image: "image"
+#     of `Type`.Network: "network"
+#     of `Type`.Node: "node"
+#     of `Type`.Plugin: "plugin"
+#     of `Type`.Secret: "secret"
+#     of `Type`.Service: "service"
+#     of `Type`.Volume: "volume"
 
-func `%`*(v: Scope): JsonNode =
-  let str = case v:
-    of Scope.Local: "local"
-    of Scope.Swarm: "swarm"
+# func `%`*(v: Scope): JsonNode =
+#   let str = case v:
+#     of Scope.Local: "local"
+#     of Scope.Swarm: "swarm"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Scope): string =
-  result = case v:
-    of Scope.Local: "local"
-    of Scope.Swarm: "swarm"
+# func `$`*(v: Scope): string =
+#   result = case v:
+#     of Scope.Local: "local"
+#     of Scope.Swarm: "swarm"

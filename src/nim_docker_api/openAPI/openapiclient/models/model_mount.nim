@@ -14,11 +14,17 @@ import model_mount_bind_options
 import model_mount_tmpfs_options
 import model_mount_volume_options
 
+# type `Type`* {.pure.} = enum
+#   Bind
+#   Volume
+#   Tmpfs
+#   Npipe
+
 type `Type`* {.pure.} = enum
-  Bind
-  Volume
-  Tmpfs
-  Npipe
+  Bind = "bind"
+  Volume = "volume"
+  Tmpfs = "tmpfs"
+  Npipe = "npipe"
 
 type Mount* = object
   ## 
@@ -31,18 +37,18 @@ type Mount* = object
   volumeOptions*: Mount_VolumeOptions
   tmpfsOptions*: Mount_TmpfsOptions
 
-func `%`*(v: `Type`): JsonNode =
-  let str = case v:
-    of `Type`.Bind: "bind"
-    of `Type`.Volume: "volume"
-    of `Type`.Tmpfs: "tmpfs"
-    of `Type`.Npipe: "npipe"
+# func `%`*(v: `Type`): JsonNode =
+#   let str = case v:
+#     of `Type`.Bind: "bind"
+#     of `Type`.Volume: "volume"
+#     of `Type`.Tmpfs: "tmpfs"
+#     of `Type`.Npipe: "npipe"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: `Type`): string =
-  result = case v:
-    of `Type`.Bind: "bind"
-    of `Type`.Volume: "volume"
-    of `Type`.Tmpfs: "tmpfs"
-    of `Type`.Npipe: "npipe"
+# func `$`*(v: `Type`): string =
+#   result = case v:
+#     of `Type`.Bind: "bind"
+#     of `Type`.Volume: "volume"
+#     of `Type`.Tmpfs: "tmpfs"
+#     of `Type`.Npipe: "npipe"

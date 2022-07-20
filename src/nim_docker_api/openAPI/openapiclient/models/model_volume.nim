@@ -15,9 +15,13 @@ import tables
 import model_object
 import model_volume_usage_data
 
+# type Scope* {.pure.} = enum
+#   Local
+#   Global
+
 type Scope* {.pure.} = enum
-  Local
-  Global
+  Local = "local"
+  Global = "global"
 
 type Volume* = object
   ## 
@@ -31,14 +35,14 @@ type Volume* = object
   options*: Table[string, string] ## The driver specific options used when creating the volume. 
   usageData*: Volume_UsageData
 
-func `%`*(v: Scope): JsonNode =
-  let str = case v:
-    of Scope.Local: "local"
-    of Scope.Global: "global"
+# func `%`*(v: Scope): JsonNode =
+#   let str = case v:
+#     of Scope.Local: "local"
+#     of Scope.Global: "global"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Scope): string =
-  result = case v:
-    of Scope.Local: "local"
-    of Scope.Global: "global"
+# func `$`*(v: Scope): string =
+#   result = case v:
+#     of Scope.Local: "local"
+#     of Scope.Global: "global"

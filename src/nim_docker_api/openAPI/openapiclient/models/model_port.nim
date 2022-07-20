@@ -11,10 +11,15 @@
 #import tables
 
 
+# type `Type`* {.pure.} = enum
+#   Tcp
+#   Udp
+#   Sctp
+
 type `Type`* {.pure.} = enum
-  Tcp
-  Udp
-  Sctp
+  Tcp = "tcp"
+  Udp = "udp"
+  Sctp = "sctp"
 
 type Port* = object
   ## An open port on a container
@@ -23,16 +28,16 @@ type Port* = object
   publicPort*: int ## Port exposed on the host
   `type`*: `Type`
 
-func `%`*(v: `Type`): JsonNode =
-  let str = case v:
-    of `Type`.Tcp: "tcp"
-    of `Type`.Udp: "udp"
-    of `Type`.Sctp: "sctp"
+# func `%`*(v: `Type`): JsonNode =
+#   let str = case v:
+#     of `Type`.Tcp: "tcp"
+#     of `Type`.Udp: "udp"
+#     of `Type`.Sctp: "sctp"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: `Type`): string =
-  result = case v:
-    of `Type`.Tcp: "tcp"
-    of `Type`.Udp: "udp"
-    of `Type`.Sctp: "sctp"
+# func `$`*(v: `Type`): string =
+#   result = case v:
+#     of `Type`.Tcp: "tcp"
+#     of `Type`.Udp: "udp"
+#     of `Type`.Sctp: "sctp"

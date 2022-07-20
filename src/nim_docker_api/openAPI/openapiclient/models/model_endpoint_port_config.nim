@@ -11,14 +11,23 @@
 #import tables
 
 
+# type Protocol* {.pure.} = enum
+#   Tcp
+#   Udp
+#   Sctp
+
+# type PublishMode* {.pure.} = enum
+#   Ingress
+#   Host
+
 type Protocol* {.pure.} = enum
-  Tcp
-  Udp
-  Sctp
+  Tcp = "tcp"
+  Udp = "udp"
+  Sctp = "sctp"
 
 type PublishMode* {.pure.} = enum
-  Ingress
-  Host
+  Ingress = "ingress"
+  Host = "host"
 
 type EndpointPortConfig* = object
   ## 
@@ -28,28 +37,28 @@ type EndpointPortConfig* = object
   publishedPort*: int ## The port on the swarm hosts.
   publishMode*: PublishMode ## The mode in which port is published.  <p><br /></p>  - \"ingress\" makes the target port accessible on every node,   regardless of whether there is a task for the service running on   that node or not. - \"host\" bypasses the routing mesh and publish the port directly on   the swarm node where that service is running. 
 
-func `%`*(v: Protocol): JsonNode =
-  let str = case v:
-    of Protocol.Tcp: "tcp"
-    of Protocol.Udp: "udp"
-    of Protocol.Sctp: "sctp"
+# func `%`*(v: Protocol): JsonNode =
+#   let str = case v:
+#     of Protocol.Tcp: "tcp"
+#     of Protocol.Udp: "udp"
+#     of Protocol.Sctp: "sctp"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Protocol): string =
-  result = case v:
-    of Protocol.Tcp: "tcp"
-    of Protocol.Udp: "udp"
-    of Protocol.Sctp: "sctp"
+# func `$`*(v: Protocol): string =
+#   result = case v:
+#     of Protocol.Tcp: "tcp"
+#     of Protocol.Udp: "udp"
+#     of Protocol.Sctp: "sctp"
 
-func `%`*(v: PublishMode): JsonNode =
-  let str = case v:
-    of PublishMode.Ingress: "ingress"
-    of PublishMode.Host: "host"
+# func `%`*(v: PublishMode): JsonNode =
+#   let str = case v:
+#     of PublishMode.Ingress: "ingress"
+#     of PublishMode.Host: "host"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: PublishMode): string =
-  result = case v:
-    of PublishMode.Ingress: "ingress"
-    of PublishMode.Host: "host"
+# func `$`*(v: PublishMode): string =
+#   result = case v:
+#     of PublishMode.Ingress: "ingress"
+#     of PublishMode.Host: "host"

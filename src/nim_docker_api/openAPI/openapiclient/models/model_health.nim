@@ -12,11 +12,17 @@
 
 import model_healthcheck_result
 
+# type Status* {.pure.} = enum
+#   None
+#   Starting
+#   Healthy
+#   Unhealthy
+
 type Status* {.pure.} = enum
-  None
-  Starting
-  Healthy
-  Unhealthy
+  None = "none"
+  Starting = "starting"
+  Healthy = "healthy"
+  Unhealthy = "unhealthy"
 
 type Health* = object
   ## Health stores information about the container's healthcheck results. 
@@ -24,18 +30,18 @@ type Health* = object
   failingStreak*: int ## FailingStreak is the number of consecutive failures
   log*: seq[HealthcheckResult] ## Log contains the last few results (oldest first) 
 
-func `%`*(v: Status): JsonNode =
-  let str = case v:
-    of Status.None: "none"
-    of Status.Starting: "starting"
-    of Status.Healthy: "healthy"
-    of Status.Unhealthy: "unhealthy"
+# func `%`*(v: Status): JsonNode =
+#   let str = case v:
+#     of Status.None: "none"
+#     of Status.Starting: "starting"
+#     of Status.Healthy: "healthy"
+#     of Status.Unhealthy: "unhealthy"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Status): string =
-  result = case v:
-    of Status.None: "none"
-    of Status.Starting: "starting"
-    of Status.Healthy: "healthy"
-    of Status.Unhealthy: "unhealthy"
+# func `$`*(v: Status): string =
+#   result = case v:
+#     of Status.None: "none"
+#     of Status.Starting: "starting"
+#     of Status.Healthy: "healthy"
+#     of Status.Unhealthy: "unhealthy"

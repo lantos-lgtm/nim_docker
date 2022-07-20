@@ -11,11 +11,17 @@
 #import tables
 
 
+# type `Type`* {.pure.} = enum
+#   Bind
+#   Volume
+#   Tmpfs
+#   Npipe
+
 type `Type`* {.pure.} = enum
-  Bind
-  Volume
-  Tmpfs
-  Npipe
+  Bind = "bind"
+  Volume = "volume"
+  Tmpfs = "tmpfs"
+  Npipe = "npipe"
 
 type MountPoint* = object
   ## MountPoint represents a mount point configuration inside the container. This is used for reporting the mountpoints in use by a container. 
@@ -28,18 +34,18 @@ type MountPoint* = object
   RW*: bool ## Whether the mount is mounted writable (read-write). 
   propagation*: string ## Propagation describes how mounts are propagated from the host into the mount point, and vice-versa. Refer to the [Linux kernel documentation](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) for details. This field is not used on Windows. 
 
-func `%`*(v: `Type`): JsonNode =
-  let str = case v:
-    of `Type`.Bind: "bind"
-    of `Type`.Volume: "volume"
-    of `Type`.Tmpfs: "tmpfs"
-    of `Type`.Npipe: "npipe"
+# func `%`*(v: `Type`): JsonNode =
+#   let str = case v:
+#     of `Type`.Bind: "bind"
+#     of `Type`.Volume: "volume"
+#     of `Type`.Tmpfs: "tmpfs"
+#     of `Type`.Npipe: "npipe"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: `Type`): string =
-  result = case v:
-    of `Type`.Bind: "bind"
-    of `Type`.Volume: "volume"
-    of `Type`.Tmpfs: "tmpfs"
-    of `Type`.Npipe: "npipe"
+# func `$`*(v: `Type`): string =
+#   result = case v:
+#     of `Type`.Bind: "bind"
+#     of `Type`.Volume: "volume"
+#     of `Type`.Tmpfs: "tmpfs"
+#     of `Type`.Npipe: "npipe"

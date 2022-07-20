@@ -11,10 +11,15 @@
 #import tables
 
 
+# type State* {.pure.} = enum
+#   Updating
+#   Paused
+#   Completed
+
 type State* {.pure.} = enum
-  Updating
-  Paused
-  Completed
+  Updating = "updating"
+  Paused = "paused"
+  Completed = "completed"
 
 type ServiceUpdateStatus* = object
   ## The status of a service update.
@@ -23,16 +28,16 @@ type ServiceUpdateStatus* = object
   completedAt*: string
   message*: string
 
-func `%`*(v: State): JsonNode =
-  let str = case v:
-    of State.Updating: "updating"
-    of State.Paused: "paused"
-    of State.Completed: "completed"
+# func `%`*(v: State): JsonNode =
+#   let str = case v:
+#     of State.Updating: "updating"
+#     of State.Paused: "paused"
+#     of State.Completed: "completed"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: State): string =
-  result = case v:
-    of State.Updating: "updating"
-    of State.Paused: "paused"
-    of State.Completed: "completed"
+# func `$`*(v: State): string =
+#   result = case v:
+#     of State.Updating: "updating"
+#     of State.Paused: "paused"
+#     of State.Completed: "completed"

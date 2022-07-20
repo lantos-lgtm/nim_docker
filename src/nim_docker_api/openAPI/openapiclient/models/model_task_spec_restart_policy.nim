@@ -11,10 +11,15 @@
 #import tables
 
 
+# type Condition* {.pure.} = enum
+#   None
+#   OnFailure
+#   Any
+
 type Condition* {.pure.} = enum
-  None
-  OnFailure
-  Any
+  None = "node"
+  OnFailure = "on-failure"
+  Any = "any"
 
 type TaskSpecRestartPolicy* = object
   ## Specification for the restart policy which applies to containers created as part of this service. 
@@ -23,16 +28,16 @@ type TaskSpecRestartPolicy* = object
   maxAttempts*: int64 ## Maximum attempts to restart a given container before giving up (default value is 0, which is ignored). 
   window*: int64 ## Windows is the time window used to evaluate the restart policy (default value is 0, which is unbounded). 
 
-func `%`*(v: Condition): JsonNode =
-  let str = case v:
-    of Condition.None: "none"
-    of Condition.OnFailure: "on-failure"
-    of Condition.Any: "any"
+# func `%`*(v: Condition): JsonNode =
+#   let str = case v:
+#     of Condition.None: "none"
+#     of Condition.OnFailure: "on-failure"
+#     of Condition.Any: "any"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Condition): string =
-  result = case v:
-    of Condition.None: "none"
-    of Condition.OnFailure: "on-failure"
-    of Condition.Any: "any"
+# func `$`*(v: Condition): string =
+#   result = case v:
+#     of Condition.None: "none"
+#     of Condition.OnFailure: "on-failure"
+#     of Condition.Any: "any"

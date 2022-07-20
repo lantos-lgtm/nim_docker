@@ -20,10 +20,15 @@ import model_task_spec_container_spec_dns_config
 import model_task_spec_container_spec_privileges
 import model_task_spec_container_spec_secrets_inner
 
+# type Isolation* {.pure.} = enum
+#   Default
+#   Process
+#   Hyperv
+
 type Isolation* {.pure.} = enum
-  Default
-  Process
-  Hyperv
+  Default = "default"
+  Process = "process"
+  Hyperv = "hyperv"
 
 type TaskSpecContainerSpec* = object
   ## Container spec for the service.  <p><br /></p>  > **Note**: ContainerSpec, NetworkAttachmentSpec, and PluginSpec are > mutually exclusive. PluginSpec is only used when the Runtime field > is set to `plugin`. NetworkAttachmentSpec is used when the Runtime > field is set to `attachment`. 
@@ -55,16 +60,16 @@ type TaskSpecContainerSpec* = object
   capabilityDrop*: seq[string] ## A list of kernel capabilities to drop from the default set for the container. 
   ulimits*: seq[Resources_Ulimits_inner] ## A list of resource limits to set in the container. For example: `{\"Name\": \"nofile\", \"Soft\": 1024, \"Hard\": 2048}`\" 
 
-func `%`*(v: Isolation): JsonNode =
-  let str = case v:
-    of Isolation.Default: "default"
-    of Isolation.Process: "process"
-    of Isolation.Hyperv: "hyperv"
+# func `%`*(v: Isolation): JsonNode =
+#   let str = case v:
+#     of Isolation.Default: "default"
+#     of Isolation.Process: "process"
+#     of Isolation.Hyperv: "hyperv"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Isolation): string =
-  result = case v:
-    of Isolation.Default: "default"
-    of Isolation.Process: "process"
-    of Isolation.Hyperv: "hyperv"
+# func `$`*(v: Isolation): string =
+#   result = case v:
+#     of Isolation.Default: "default"
+#     of Isolation.Process: "process"
+#     of Isolation.Hyperv: "hyperv"

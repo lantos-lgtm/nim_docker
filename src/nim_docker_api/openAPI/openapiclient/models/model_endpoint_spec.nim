@@ -12,23 +12,27 @@
 
 import model_endpoint_port_config
 
+# type Mode* {.pure.} = enum
+#   Vip
+#   Dnsrr
+
 type Mode* {.pure.} = enum
-  Vip
-  Dnsrr
+  Vip = "vip"
+  Dnsrr = "dnsrr"
 
 type EndpointSpec* = object
   ## Properties that can be configured to access and load balance a service.
   mode*: Mode ## The mode of resolution to use for internal load balancing between tasks. 
   ports*: seq[EndpointPortConfig] ## List of exposed ports that this service is accessible on from the outside. Ports can only be provided if `vip` resolution mode is used. 
 
-func `%`*(v: Mode): JsonNode =
-  let str = case v:
-    of Mode.Vip: "vip"
-    of Mode.Dnsrr: "dnsrr"
+# func `%`*(v: Mode): JsonNode =
+#   let str = case v:
+#     of Mode.Vip: "vip"
+#     of Mode.Dnsrr: "dnsrr"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Mode): string =
-  result = case v:
-    of Mode.Vip: "vip"
-    of Mode.Dnsrr: "dnsrr"
+# func `$`*(v: Mode): string =
+#   result = case v:
+#     of Mode.Vip: "vip"
+#     of Mode.Dnsrr: "dnsrr"

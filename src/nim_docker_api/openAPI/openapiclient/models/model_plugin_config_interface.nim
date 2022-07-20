@@ -12,9 +12,13 @@
 
 import model_plugin_interface_type
 
-type ProtocolScheme* {.pure.} = enum
+# type ProtocolScheme* {.pure.} = enum
   
-  MobyPluginsHttpV1
+#   MobyPluginsHttpV1
+
+type ProtocolScheme* {.pure.} = enum
+
+  MobyPluginsHttpV1 = "moby.plugins.http/v1" 
 
 type PluginConfigInterface* = object
   ## The interface between Docker and the plugin
@@ -22,14 +26,14 @@ type PluginConfigInterface* = object
   socket*: string
   protocolScheme*: ProtocolScheme ## Protocol to use for clients connecting to the plugin.
 
-func `%`*(v: ProtocolScheme): JsonNode =
-  let str = case v:
-    of ProtocolScheme.: ""
-    of ProtocolScheme.MobyPluginsHttpV1: "moby.plugins.http/v1"
+# func `%`*(v: ProtocolScheme): JsonNode =
+#   let str = case v:
+#     of ProtocolScheme.: ""
+#     of ProtocolScheme.MobyPluginsHttpV1: "moby.plugins.http/v1"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: ProtocolScheme): string =
-  result = case v:
-    of ProtocolScheme.: ""
-    of ProtocolScheme.MobyPluginsHttpV1: "moby.plugins.http/v1"
+# func `$`*(v: ProtocolScheme): string =
+#   result = case v:
+#     of ProtocolScheme.: ""
+#     of ProtocolScheme.MobyPluginsHttpV1: "moby.plugins.http/v1"

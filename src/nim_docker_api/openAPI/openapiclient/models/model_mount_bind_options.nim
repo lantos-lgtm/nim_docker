@@ -11,35 +11,43 @@
 #import tables
 
 
+# type Propagation* {.pure.} = enum
+#   Private
+#   Rprivate
+#   Shared
+#   Rshared
+#   Slave
+#   Rslave
+
 type Propagation* {.pure.} = enum
-  Private
-  Rprivate
-  Shared
-  Rshared
-  Slave
-  Rslave
+  Private = "private"
+  Rprivate = "rprivate"
+  Shared = "shared"
+  Rshared = "rshared"
+  Slave = "slave"
+  Rslave = "rslave"
 
 type MountBindOptions* = object
   ## Optional configuration for the `bind` type.
   propagation*: Propagation ## A propagation mode with the value `[r]private`, `[r]shared`, or `[r]slave`.
   nonRecursive*: bool ## Disable recursive bind mount.
 
-func `%`*(v: Propagation): JsonNode =
-  let str = case v:
-    of Propagation.Private: "private"
-    of Propagation.Rprivate: "rprivate"
-    of Propagation.Shared: "shared"
-    of Propagation.Rshared: "rshared"
-    of Propagation.Slave: "slave"
-    of Propagation.Rslave: "rslave"
+# func `%`*(v: Propagation): JsonNode =
+#   let str = case v:
+#     of Propagation.Private: "private"
+#     of Propagation.Rprivate: "rprivate"
+#     of Propagation.Shared: "shared"
+#     of Propagation.Rshared: "rshared"
+#     of Propagation.Slave: "slave"
+#     of Propagation.Rslave: "rslave"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Propagation): string =
-  result = case v:
-    of Propagation.Private: "private"
-    of Propagation.Rprivate: "rprivate"
-    of Propagation.Shared: "shared"
-    of Propagation.Rshared: "rshared"
-    of Propagation.Slave: "slave"
-    of Propagation.Rslave: "rslave"
+# func `$`*(v: Propagation): string =
+#   result = case v:
+#     of Propagation.Private: "private"
+#     of Propagation.Rprivate: "rprivate"
+#     of Propagation.Shared: "shared"
+#     of Propagation.Rshared: "rshared"
+#     of Propagation.Slave: "slave"
+#     of Propagation.Rslave: "rslave"
