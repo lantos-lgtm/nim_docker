@@ -13,7 +13,8 @@
 import model_health_config
 #import model_map
 import tables
-import model_object
+# import model_object
+import options
 
 type ContainerConfig* = object
   ## Configuration for a container that is portable between hosts. 
@@ -23,7 +24,9 @@ type ContainerConfig* = object
   attachStdin*: bool ## Whether to attach to `stdin`.
   attachStdout*: bool ## Whether to attach to `stdout`.
   attachStderr*: bool ## Whether to attach to `stderr`.
-  exposedPorts*: Table[string, object] ## An object mapping ports to an empty object in the form:  `{\"<port>/<tcp|udp|sctp>\": {}}` 
+  # exposedPorts*: Table[string, object] ## An object mapping ports to an empty object in the form:  `{\"<port>/<tcp|udp|sctp>\": {}}` 
+  # exposedPorts*: Table[string, object] ## An object mapping ports to an empty object in the form:  `{\"<port>/<tcp|udp|sctp>\": {}}` 
+  exposedPorts*: Option[Table[string, Option[Table[string, string]]]] ## An object mapping ports to an empty object in the form:  `{\"<port>/<tcp|udp|sctp>\": {}}` 
   tty*: bool ## Attach standard streams to a TTY, including `stdin` if it is not closed. 
   openStdin*: bool ## Open `stdin`
   stdinOnce*: bool ## Close `stdin` after one attached client disconnects
@@ -32,7 +35,8 @@ type ContainerConfig* = object
   healthcheck*: HealthConfig
   argsEscaped*: bool ## Command is already escaped (Windows only)
   image*: string ## The name (or reference) of the image to use when creating the container, or which was used when the container was created. 
-  volumes*: Table[string, object] ## An object mapping mount point paths inside the container to empty objects. 
+  # volumes*: Table[string, object] ## An object mapping mount point paths inside the container to empty objects. 
+  volumes*: Option[Table[string, Option[Table[string, string]]]] ## An object mapping mount point paths inside the container to empty objects. 
   workingDir*: string ## The working directory for commands to run in.
   entrypoint*: seq[string] ## The entry point for the container as a string or an array of strings.  If the array consists of exactly one empty string (`[\"\"]`) then the entry point is reset to system default (i.e., the entry point used by docker when there is no `ENTRYPOINT` instruction in the `Dockerfile`). 
   networkDisabled*: bool ## Disable networking for the container.

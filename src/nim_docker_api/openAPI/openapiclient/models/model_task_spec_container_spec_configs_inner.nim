@@ -10,12 +10,15 @@
 #import json
 #import tables
 
-import model_object
+# import model_object
+import tables
+import options
 import model_task_spec_container_spec_configs_inner_file
 
 type TaskSpecContainerSpecConfigsInner* = object
   ## 
   file*: TaskSpec_ContainerSpec_Configs_inner_File
-  runtime*: object ## Runtime represents a target that is not mounted into the container but is used by the task  <p><br /><p>  > **Note**: `Configs.File` and `Configs.Runtime` are mutually > exclusive 
+  # runtime*: object ## Runtime represents a target that is not mounted into the container but is used by the task  <p><br /><p>  > **Note**: `Configs.File` and `Configs.Runtime` are mutually > exclusive 
+  runtime*: Option[Table[string,string]] ## Runtime represents a target that is not mounted into the container but is used by the task  <p><br /><p>  > **Note**: `Configs.File` and `Configs.Runtime` are mutually > exclusive 
   configID*: string ## ConfigID represents the ID of the specific config that we're referencing. 
   configName*: string ## ConfigName is the name of the config that this references, but this is just provided for lookup/display purposes. The config in the reference will be identified by its ID. 

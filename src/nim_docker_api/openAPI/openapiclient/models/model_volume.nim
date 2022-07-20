@@ -11,8 +11,9 @@
 #import tables
 
 #import model_map
+# import model_object
 import tables
-import model_object
+import options
 import model_volume_usage_data
 
 # type Scope* {.pure.} = enum
@@ -29,8 +30,9 @@ type Volume* = object
   driver*: string ## Name of the volume driver used by the volume.
   mountpoint*: string ## Mount path of the volume on the host.
   createdAt*: string ## Date/Time the volume was created.
-  status*: Table[string, object] ## Low-level details about the volume, provided by the volume driver. Details are returned as a map with key/value pairs: `{\"key\":\"value\",\"key2\":\"value2\"}`.  The `Status` field is optional, and is omitted if the volume driver does not support this feature. 
-  labels*: Table[string, string] ## User-defined key/value metadata.
+  # status*: Table[string, object] ## Low-level details about the volume, provided by the volume driver. Details are returned as a map with key/value pairs: `{\"key\":\"value\",\"key2\":\"value2\"}`.  The `Status` field is optional, and is omitted if the volume driver does not support this feature. 
+  status*: Option[Table[string, Option[Table[string, string]]]] ## Low-level details about the volume, provided by the volume driver. Details are returned as a map with key/value pairs: `{\"key\":\"value\",\"key2\":\"value2\"}`.  The `Status` field is optional, and is omitted if the volume driver does not support this feature. 
+  labels*: Option[Table[string, string]] ## User-defined key/value metadata.
   scope*: Scope ## The level at which the volume exists. Either `global` for cluster-wide, or `local` for machine level. 
   options*: Table[string, string] ## The driver specific options used when creating the volume. 
   usageData*: Volume_UsageData

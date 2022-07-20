@@ -10,13 +10,17 @@
 #import json
 #import tables
 
-import model_object
+# import model_object
+import tables
+import options
 import model_service_spec_mode_replicated
 import model_service_spec_mode_replicated_job
 
 type ServiceSpecMode* = object
   ## Scheduling mode for the service.
   replicated*: ServiceSpec_Mode_Replicated
-  global*: object
+  # global*: object
+  global*: Option[Table[string, string]]
   replicatedJob*: ServiceSpec_Mode_ReplicatedJob
-  globalJob*: object ## The mode used for services which run a task to the completed state on each valid node. 
+  # globalJob*: object ## The mode used for services which run a task to the completed state on each valid node. 
+  globalJob*: Option[Table[string, string]] ## The mode used for services which run a task to the completed state on each valid node. 

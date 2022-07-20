@@ -10,10 +10,13 @@
 #import json
 #import tables
 
-import model_object
+# import model_object
+import tables
+import options
 
 type SystemVersionComponentsInner* = object
   ## 
   name*: string ## Name of the component 
   version*: string ## Version of the component 
-  details*: object ## Key/value pairs of strings with additional information about the component. These values are intended for informational purposes only, and their content is not defined, and not part of the API specification.  These messages can be printed by the client as information to the user. 
+  # details*: object ## Key/value pairs of strings with additional information about the component. These values are intended for informational purposes only, and their content is not defined, and not part of the API specification.  These messages can be printed by the client as information to the user. 
+  details*: Option[Table[string, string]] ## Key/value pairs of strings with additional information about the component. These values are intended for informational purposes only, and their content is not defined, and not part of the API specification.  These messages can be printed by the client as information to the user. 

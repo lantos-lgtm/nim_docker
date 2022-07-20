@@ -86,6 +86,9 @@ type EndpointPortConfig* = object
 #     of PublishMode.Host: "host"
 ```
 
+fix object type
+find import model_object in models
+
 
 
 
