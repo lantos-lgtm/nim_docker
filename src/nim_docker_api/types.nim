@@ -110,6 +110,9 @@ type
     # errors
     DockerError* = object of CatchableError
     BadRequest* = object of DockerError
+    NotFound* = object of DockerError
+    Conflict* = object of DockerError
+    NotModified* = object of DockerError
     ServerError* = object of DockerError
 
 
@@ -242,6 +245,9 @@ type
         shell*: seq[string]            # Shell for shell-form of RUN, CMD, ENTRYPOIN
         hostConfig*: HostConfig
         networkingConfig*: NetworkingConfig
+
+    ContainerInspectOptions* = object
+        size*: bool
 
     ContainerStartOptions* = object
         detatchKeys*: string

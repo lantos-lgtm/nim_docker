@@ -2,7 +2,6 @@ import
     ./types,
     httpClient,
     jsony,
-    libcurl,
     strutils,
     tables,
     streams,
@@ -34,34 +33,26 @@ proc initAsyncDocker*(baseUrl: string): AsyncDocker =
 
 
 
-type CurlWriteFnHandle* = proc (
-                buffer: cstring,
-                size: int,
-                count: int,
-                outstream: pointer): int {.gcsafe, locks: 0.}
-
-proc defaultCurlWriteFn(
-        buffer: cstring,
-        size: int,
-        count: int,
-        outstream: pointer
-    ): int =
-    let outbuf = cast[ref string](outstream)
-    outbuf[] &= buffer
-    result = size * count
 
 proc containers*(
             docker: Docker | AsyncDocker,
             all: bool = false
-        # ): Future[seq[Container]] {.multiSync.} =
-        ): Future[string] {.multiSync.} =
-        
+        ): Future[seq[Container]] {.multiSync.} =
+
     let httpPath = "/containers/json" & (if all: "?all=true" else: "")
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     let res = await docker.client.request(httpUrl, HttpGet, "", nil)
     let body = await res.body
-    result = body
-    # result = body.fromJson(seq[Container])
+    case res.code():
+    of Http200:
+        return (await res.body()).fromJson(seq[Container])
+    of Http404:
+        raise newException(Notfound, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
+
 
 proc containerCreate*(
             docker: Docker | AsyncDocker,
@@ -72,20 +63,59 @@ proc containerCreate*(
     if not name.match(re"^/?[a-zA-Z0-9][a-zA-Z0-9_.-]+$"):
         raise newException(Defect, "Invalid container name, name must match ^/?[a-zA-Z0-9][a-zA-Z0-9_.-]+$")
 
-    let httpPath = "/containers/create"
-    let httpUrl = docker.baseUrl & "/" & docker.version & httpPath & "?name=" & name
+    let httpPath = "/containers/create" & "?name=" & name
+    let httpUrl = docker.baseUrl & "/" & docker.version & httpPath 
     let res = await docker.client.request(
             httpUrl,
             HttpMethod.HttpPost,
             config.toJson(), nil)
-    let body = await res.body
-    result = body.fromJson(CreateResponse)
+    case res.code():
+    of Http201:
+        return (await res.body()).fromJson(CreateResponse)
+    of Http400:
+        raise newException(BadRequest, await res.body())
+    of Http404:
+        raise newException(NotFound, await res.body())
+    of Http409:
+        raise newException(Conflict, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
+ 
+
+proc containerInspect*(
+            docker: Docker | AsyncDocker,
+            name: string,
+            config: ContainerInspectOptions
+        ): Future[Container] {.multiSync.} =
+
+    let httpPath = "/containers/" & name & "/create"
+    let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
+    let res = await docker.client.request(
+            httpUrl,
+            HttpMethod.HttpPost,
+            config.toJson()
+    )
+    case res.code():
+    of Http201:
+        return (await res.body()).fromJson(Container)
+    of Http400:
+        raise newException(BadRequest, await res.body())
+    of Http404:
+        raise newException(NotFound, await res.body())
+    of Http409:
+        raise newException(Conflict, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
 
 proc containerStart*(
             docker: Docker | AsyncDocker,
             id: string, # name or id
             options = ContainerStartOptions(detatchKeys: "ctrl-c")
-        ): Future[string] {.multisync.} =
+        ): Future[void] {.multiSync.} =
 
     let httpPath = "/containers/" & id & "/start"
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
@@ -96,13 +126,23 @@ proc containerStart*(
         "",
         nil
     )
-    result = await res.body()
+    case res.code():
+    of Http200:
+        return
+    of Http304:
+        raise newException(NotModified, "Container already started")
+    of Http404:
+        raise newException(NotFound, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
 
 proc containerStop*(
             docker: Docker | AsyncDocker,
             id: string, # name or id
             options = ContainerStopOptions(t: 10)
-        ): Future[string] {.multiSync.} =
+        ): Future[void] {.multiSync.} =
     let httpPath = "/containers/" & id & "/stop"
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     let res = await docker.client.request(
@@ -110,30 +150,49 @@ proc containerStop*(
             HttpMethod.HttpPost,
             options.toJson(),
             nil,
-            )
-    result = await res.body()
+        )
+    case res.code():
+    of Http204:
+        return
+    of Http304:
+        raise newException(NotModified, "Container already stopped")
+    of Http404:
+        raise newException(BadRequest, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
 
 proc containerRestart*(
             docker: Docker | AsyncDocker,
             id: string, # name or id
             options = ContainerStopOptions(t: 10)
-        ): Future[string] {.multiSync.} =
+        ): Future[void] {.multiSync.} =
+
     let httpPath = "/containers/" & id & "/restart"
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     let res = await docker.client.request(
             httpUrl, HttpMethod.HttpPost,
             options.toJson(),
-            nil,
         )
-    result = await res.body()
-
-# TODO oupdate, rename, pause, unpause, attatch, attatch via websocket, wait ...
+    case res.code()
+    of Http204:
+        return
+    of Http304:
+        raise newException(NotModified, "Container already stopped")
+    of Http404:
+        raise newException(BadRequest, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
 
 proc containerRemove*(
             docker: Docker | AsyncDocker,
             id: string, # name or id
             options = ContainerRemoveOptions(v: true, force: true, link: true)
     ): Future[string] {.multiSync.} =
+
     let httpPath = "/containers/" & id
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     echo options.toJson()
@@ -143,7 +202,7 @@ proc containerRemove*(
             options.toJson(),
             nil,
         )
-    result = await res.body()
+    return await res.body()
 
 
 # this is a stream need to change it to a stream
@@ -152,6 +211,7 @@ proc containerStats*(
             id: string, # name or id
             options = ContainerStatsOptions(stream: true),
     ): Stream =
+
     let httpPath = "/containers/" & id & "/stats"
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     let res = docker.client.request(
@@ -160,26 +220,24 @@ proc containerStats*(
             options.toJson(),
             nil,
         )
-    result = res.bodyStream
+    return res.bodyStream
 
 
-# # this is a stream need to change it to a stream
-# proc containerStats*(
-#             docker: AsyncDocker,
-#             id: string, # name or id
-#             options = ContainerStatsOptions(stream: true),
-#     ): Stream[string] {.async.} =
-#     let httpPath = "/containers/" & id & "/stats"
-#     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
-#     let res = await docker.client.request(
-#             httpUrl,
-#             HttpMethod.HttpGet,
-#             options.toJson(),
-#             nil,
-#         )
-#     let stringStream = newStringStream()
-#     res.bodyStream = stringStream
-#     result = stringSream 
+# this is a stream need to change it to a stream
+proc containerStats*(
+            docker: AsyncDocker,
+            id: string, # name or id
+            options = ContainerStatsOptions(stream: true),
+    ): Future[FutureStream[string]] {.async.} =
+    let httpPath = "/containers/" & id & "/stats"
+    let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
+    let res = await docker.client.request(
+            httpUrl,
+            HttpMethod.HttpGet,
+            options.toJson(),
+            nil,
+        )
+    return res.bodyStream    
 
 
 proc calculateCPUPercentUNIX(stats: ContainerStats): float64 =

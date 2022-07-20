@@ -14,73 +14,115 @@ export types, client, tables, jsony, options
 
 
 
-# {.push raises: [].} # Always at start of module
+# # {.push raises: [].} # Always at start of module
 
 
-proc main*() =
+# proc main*() =
 
-    var docker = initDocker("unix:///var/run/docker.sock")
-    # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
-    echo docker.containers(all=true)
+#     var docker = initDocker("unix:///var/run/docker.sock")
+#     # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
+#     echo docker.containers(all=true)
 
-    let containerConfig = ContainerConfig(
-        image: "nginx:alpine",
-        exposedPorts: some({
-            "80/tcp": none(Table[string,string])
-        }.newTable()[]),
-        hostConfig: (HostConfig(
-            portBindings: some({
-                "80/tcp": (@[
-                    {"HostPort":"8081"}.newTable()[]
-                ])
-            }.newTable()[])
-        ))
-    )
-    let containerName = "myContainer0"
-    # stopping existing container
-    echo docker.containerStop(containerName)
-    # removing existing container
-    echo docker.containerRemove(containerName)
-    # creating new container
-    echo docker.containerCreate(containerName, containerConfig)
-    # starting new container
-    echo docker.containerStart(containerName)
+#     let containerConfig = ContainerConfig(
+#         image: "nginx:alpine",
+#         exposedPorts: some({
+#             "80/tcp": none(Table[string,string])
+#         }.newTable()[]),
+#         hostConfig: (HostConfig(
+#             portBindings: some({
+#                 "80/tcp": (@[
+#                     {"HostPort":"8081"}.newTable()[]
+#                 ])
+#             }.newTable()[])
+#         ))
+#     )
+#     let containerName = "myContainer0"
+#     # stopping existing container
+#     try:
+#         docker.containerStop(containerName)
+#         echo "stopped " & containerName & " container"
+#     except NotModified:
+#         echo "container " & containerName & " already stopped"
+#     # removing existing container
+#     echo docker.containerRemove(containerName)
+#     # creating new container
+#     echo docker.containerCreate(containerName, containerConfig)
+#     # starting new container
+#     echo docker.containerStart(containerName)
 
-proc mainAsync*() {.async.}=
+# proc echoStream(name: string) {.async.} =
+#     var docker = initAsyncDocker("unix:///var/run/docker.sock")
+#     let futureStream = await docker.containerStats(name)
+#     while true:
+#         let (hasData, buff) = await futureStream.read()
+#         if not hasData:
+#             break
+#         echo buff
+    
 
-    var docker = initAsyncDocker("unix:///var/run/docker.sock")
-    # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
-    echo (await docker.containers(all=true))
+# proc mainAsync*() {.async.}=
 
-    let containerConfig = ContainerConfig(
-        image: "nginx:alpine",
-        exposedPorts: some({
-            "80/tcp": none(Table[string,string])
-        }.newTable()[]),
-        hostConfig: (HostConfig(
-            portBindings: some({
-                "80/tcp": (@[
-                    {"HostPort":"8082"}.newTable()[]
-                ])
-            }.newTable()[])
-        ))
-    )
-    let containerName = "myContainer0Async"
-    # stopping existing container
-    echo await docker.containerStop(containerName)
-    # removing existing container
-    echo await docker.containerRemove(containerName)
-    # creating new container
-    echo await docker.containerCreate(containerName, containerConfig)
-    # starting new container
-    echo await docker.containerStart(containerName)
+#     var docker = initAsyncDocker("unix:///var/run/docker.sock")
+#     # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
+
+#     echo "getting container stats"
+#     echo (await docker.containers(all=true))
+
+#     let containerName = "myContainer0Async"
+#     let containerConfig = ContainerConfig(
+#         image: "nginx:alpine",
+#         exposedPorts: some({
+#             "80/tcp": none(Table[string,string])
+#         }.newTable()[]),
+#         hostConfig: (HostConfig(
+#             portBindings: some({
+#                 "80/tcp": (@[
+#                     {"HostPort":"8082"}.newTable()[]
+#                 ])
+#             }.newTable()[])
+#         ))
+#     )
+#     # stopping existing container
+#     echo "stopping " & containerName & " container"
+#     try:
+#         await docker.containerStop(containerName)
+#         echo "stopped " & containerName & " container"
+#     except NotModified:
+#         echo "container " & containerName & " already stopped"
+
+#     # removing existing container
+#     echo "removing " & containerName & " container"
+#     echo await docker.containerRemove(containerName)
+#     # creating new container
+#     echo "creating " & containerName & " container"
+#     echo await docker.containerCreate(containerName, containerConfig)
+#     # starting new container
+#     echo "starting " & containerName & " container"
+#     echo await docker.containerStart(containerName)
+
+#     # asyncCheck echoStream(containerName)
+#     # asyncCheck echoStream("myContainer0")
+    
 
 
 
-when isMainModule:
-    main()
-    waitFor mainAsync()
-    # runForever()
-    # for i in 1..20:
-    #     spawn spam(i)
-    # sync()
+# when isMainModule:
+#     # main()
+#     waitFor mainAsync()
+#     runForever()
+#     # for i in 1..20:
+#     #     spawn spam(i)
+#     # sync()
+
+
+type Status* {.pure.} = enum
+  Created
+  Running
+  Paused
+  Restarting
+  Removing
+  Exited
+  Dead
+
+let test = Status.Created
+echo test.toJson()
