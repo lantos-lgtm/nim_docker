@@ -12,13 +12,13 @@
 
 import model_device_mapping
 import model_device_request
-import model_host_config_all_of
+# import model_host_config_all_of
 import model_host_config_all_of_log_config
 #import model_map
 import tables
 import model_mount
 import model_port_binding
-import model_resources
+# import model_resources
 import model_resources_blkio_weight_device_inner
 import model_resources_ulimits_inner
 import model_restart_policy

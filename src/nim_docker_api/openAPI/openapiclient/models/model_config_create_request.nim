@@ -10,14 +10,15 @@
 #import json
 #import tables
 
-import model_config_spec
+# import model_config_spec
 import model_driver
 #import model_map
 import tables
+import options
 
 type ConfigCreateRequest* = object
   ## 
   name*: string ## User-defined name of the config.
-  labels*: Table[string, string] ## User-defined key/value metadata.
+  labels*: Option[Table[string, string]] ## User-defined key/value metadata.
   data*: string ## Base64-url-safe-encoded ([RFC 4648](https://tools.ietf.org/html/rfc4648#section-5)) config data. 
   templating*: Driver

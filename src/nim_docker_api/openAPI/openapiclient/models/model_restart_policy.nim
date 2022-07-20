@@ -11,32 +11,37 @@
 #import tables
 
 
-type Name* {.pure.} = enum
+# type Name* {.pure.} = enum
   
-  No
-  Always
-  UnlessStopped
-  OnFailure
+#   No
+#   Always
+#   UnlessStopped
+#   OnFailure
+type Name* {.pure.} = enum
+  No = "no"
+  Always = "always"
+  UnlessStopped = "unless-stopped"
+  OnFailure = "on-failure"
 
 type RestartPolicy* = object
   ## The behavior to apply when the container exits. The default is not to restart.  An ever increasing delay (double the previous delay, starting at 100ms) is added before each restart to prevent flooding the server. 
   name*: Name ## - Empty string means not to restart - `no` Do not automatically restart - `always` Always restart - `unless-stopped` Restart always except when the user has manually stopped the container - `on-failure` Restart only when the container exit code is non-zero 
   maximumRetryCount*: int ## If `on-failure` is used, the number of times to retry before giving up. 
 
-func `%`*(v: Name): JsonNode =
-  let str = case v:
-    of Name.: ""
-    of Name.No: "no"
-    of Name.Always: "always"
-    of Name.UnlessStopped: "unless-stopped"
-    of Name.OnFailure: "on-failure"
+# func `%`*(v: Name): JsonNode =
+#   let str = case v:
+#     of Name.: ""
+#     of Name.No: "no"
+#     of Name.Always: "always"
+#     of Name.UnlessStopped: "unless-stopped"
+#     of Name.OnFailure: "on-failure"
 
-  JsonNode(kind: JString, str: str)
+#   JsonNode(kind: JString, str: str)
 
-func `$`*(v: Name): string =
-  result = case v:
-    of Name.: ""
-    of Name.No: "no"
-    of Name.Always: "always"
-    of Name.UnlessStopped: "unless-stopped"
-    of Name.OnFailure: "on-failure"
+# func `$`*(v: Name): string =
+#   result = case v:
+#     of Name.: ""
+#     of Name.No: "no"
+#     of Name.Always: "always"
+#     of Name.UnlessStopped: "unless-stopped"
+#     of Name.OnFailure: "on-failure"
