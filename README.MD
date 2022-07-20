@@ -21,3 +21,17 @@ proc main()=
     echo containers
 
 ```
+
+
+
+attempting openAPI generations
+```bash
+docker run --rm \
+    -v $PWD:/local openapitools/openapi-generator-cli generate \
+    -i https://docs.docker.com/engine/api/v1.41.yaml \
+    -g nim \
+    -o ./local/src/nim_docker_api/openAPI
+
+```
+
+openAPI has no mapping for map... fixing
