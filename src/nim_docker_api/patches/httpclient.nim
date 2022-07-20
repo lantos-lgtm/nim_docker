@@ -1032,7 +1032,6 @@ proc requestAux(client: HttpClient | AsyncHttpClient; url: Uri;
       client.parseBodyFut = nil
 
   await newConnection(client, tempUrl)
-
   var newHeaders: HttpHeaders
 
   var data: seq[string]
