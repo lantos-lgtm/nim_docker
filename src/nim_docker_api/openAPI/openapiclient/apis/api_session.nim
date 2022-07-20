@@ -8,7 +8,7 @@
 #
 
 import httpclient
-import json
+
 import logging
 import marshal
 import options
