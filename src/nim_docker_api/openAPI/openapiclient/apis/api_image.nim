@@ -14,7 +14,7 @@ import marshal
 import options
 import strformat
 import strutils
-
+import tables
 import typetraits
 import uri
 
