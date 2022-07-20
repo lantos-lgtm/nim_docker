@@ -116,7 +116,7 @@ export types, client, tables, jsony, options
 
 
 type Status* {.pure.} = enum
-  Created
+  Created = "created"
   Running
   Paused
   Restarting
