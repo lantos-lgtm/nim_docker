@@ -8,11 +8,11 @@
 #
 
 
-import tables
+
 
 import model_container_summary_host_config
 import model_container_summary_network_settings
-
+import tables
 import model_mount_point
 import model_port
 

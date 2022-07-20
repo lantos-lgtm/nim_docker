@@ -8,11 +8,11 @@
 #
 
 
-import tables
+
 
 import model_config_spec
 import model_driver
-
+import tables
 
 type ConfigCreateRequest* = object
   ## 

@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_config_spec
 import model_object_version

@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_error_detail
 import model_image_id

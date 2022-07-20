@@ -8,13 +8,13 @@
 #
 
 
-import tables
+
 
 import model_device_mapping
 import model_device_request
 import model_host_config_all_of
 import model_host_config_all_of_log_config
-
+import tables
 import model_mount
 import model_port_binding
 import model_resources

@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_network_attachment_config
 import model_task_spec_container_spec

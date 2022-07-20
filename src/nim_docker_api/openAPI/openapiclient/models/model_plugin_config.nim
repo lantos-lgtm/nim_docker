@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_plugin_config_args
 import model_plugin_config_interface

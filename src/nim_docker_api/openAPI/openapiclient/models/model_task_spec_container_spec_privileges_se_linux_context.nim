@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 
 type TaskSpecContainerSpecPrivilegesSELinuxContext* = object

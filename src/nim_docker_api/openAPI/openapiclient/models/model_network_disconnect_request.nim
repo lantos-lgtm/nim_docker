@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_endpoint_settings
 

@@ -8,10 +8,10 @@
 #
 
 
-import tables
+
 
 import model_endpoint_spec
-
+import tables
 import model_network_attachment_config
 import model_service_spec_mode
 import model_service_spec_rollback_config

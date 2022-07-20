@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_limit
 import model_resource_object

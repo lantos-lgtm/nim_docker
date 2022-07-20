@@ -8,11 +8,11 @@
 #
 
 
-import tables
+
 
 import model_commit
 import model_generic_resources_inner
-
+import tables
 import model_plugins_info
 import model_registry_service_config
 import model_runtime

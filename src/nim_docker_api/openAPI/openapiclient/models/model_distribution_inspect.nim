@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_oci_descriptor
 import model_oci_platform

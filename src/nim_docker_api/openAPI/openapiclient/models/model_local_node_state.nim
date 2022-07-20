@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 
 type LocalNodeState* = object

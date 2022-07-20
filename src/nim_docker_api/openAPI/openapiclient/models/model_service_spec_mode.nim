@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_object
 import model_service_spec_mode_replicated

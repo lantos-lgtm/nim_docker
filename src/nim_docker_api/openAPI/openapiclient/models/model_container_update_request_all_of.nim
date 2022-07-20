@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_restart_policy
 

@@ -35,3 +35,9 @@ docker run --rm \
 ```
 
 openAPI has no mapping for map... fixing
+
+find models/* "import json" replace ""
+find models/* "import tables" replace ""
+find models/* "import models_map" replace "import tables
+
+<!-- need to deal with import object -->

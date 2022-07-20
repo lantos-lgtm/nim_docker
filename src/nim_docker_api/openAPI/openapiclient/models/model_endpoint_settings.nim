@@ -8,10 +8,10 @@
 #
 
 
-import tables
+
 
 import model_endpoint_ipam_config
-
+import tables
 
 type EndpointSettings* = object
   ## Configuration for a network endpoint.

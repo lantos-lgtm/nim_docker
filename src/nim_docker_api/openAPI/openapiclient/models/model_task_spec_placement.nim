@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_platform
 import model_task_spec_placement_preferences_inner

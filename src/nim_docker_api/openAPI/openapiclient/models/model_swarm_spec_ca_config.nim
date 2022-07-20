@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_swarm_spec_ca_config_external_cas_inner
 

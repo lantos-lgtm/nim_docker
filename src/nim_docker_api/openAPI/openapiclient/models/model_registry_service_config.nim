@@ -8,10 +8,10 @@
 #
 
 
-import tables
+
 
 import model_index_info
-
+import tables
 
 type RegistryServiceConfig* = object
   ## RegistryServiceConfig stores daemon registry services configuration. 

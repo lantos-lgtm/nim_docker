@@ -8,10 +8,10 @@
 #
 
 
-import tables
+
 
 import model_endpoint_settings
-
+import tables
 
 type ContainerSummaryNetworkSettings* = object
   ## A summary of the container's network settings

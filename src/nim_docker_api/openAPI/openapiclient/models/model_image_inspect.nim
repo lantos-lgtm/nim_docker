@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_container_config
 import model_graph_driver_data

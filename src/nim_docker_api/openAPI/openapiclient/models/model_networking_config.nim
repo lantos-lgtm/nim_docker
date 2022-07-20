@@ -8,10 +8,10 @@
 #
 
 
-import tables
+
 
 import model_endpoint_settings
-
+import tables
 
 type NetworkingConfig* = object
   ## NetworkingConfig represents the container's networking configuration for each of its interfaces. It is used for the networking configs specified in the `docker create` and `docker network connect` commands. 

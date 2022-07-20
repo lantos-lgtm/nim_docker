@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_container_wait_exit_error
 

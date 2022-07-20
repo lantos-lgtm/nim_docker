@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_engine_description
 import model_platform

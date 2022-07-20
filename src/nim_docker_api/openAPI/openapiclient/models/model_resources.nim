@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_device_mapping
 import model_device_request

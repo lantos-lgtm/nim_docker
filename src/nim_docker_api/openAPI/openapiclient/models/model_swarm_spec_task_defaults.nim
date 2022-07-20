@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_swarm_spec_task_defaults_log_driver
 

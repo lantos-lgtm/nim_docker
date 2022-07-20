@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_build_cache
 import model_container_summary

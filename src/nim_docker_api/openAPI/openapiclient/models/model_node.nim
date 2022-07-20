@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_manager_status
 import model_node_description

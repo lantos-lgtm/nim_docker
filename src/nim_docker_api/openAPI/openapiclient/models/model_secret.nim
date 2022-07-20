@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_object_version
 import model_secret_spec

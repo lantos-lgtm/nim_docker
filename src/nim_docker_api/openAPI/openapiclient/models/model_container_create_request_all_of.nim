@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_host_config
 import model_networking_config

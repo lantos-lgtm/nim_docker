@@ -8,9 +8,9 @@
 #
 
 
+
+
 import tables
-
-
 
 type Protocol* {.pure.} = enum
   Cfssl

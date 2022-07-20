@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_container_update_request_all_of
 import model_device_mapping

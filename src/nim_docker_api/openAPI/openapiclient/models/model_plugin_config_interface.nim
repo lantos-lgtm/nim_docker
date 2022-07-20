@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_plugin_interface_type
 

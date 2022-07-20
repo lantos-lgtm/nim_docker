@@ -8,9 +8,9 @@
 #
 
 
+
+
 import tables
-
-
 
 type Role* {.pure.} = enum
   Worker

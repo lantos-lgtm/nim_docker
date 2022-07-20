@@ -8,11 +8,11 @@
 #
 
 
-import tables
+
 
 import model_address
 import model_endpoint_settings
-
+import tables
 import model_port_binding
 
 type NetworkSettings* = object

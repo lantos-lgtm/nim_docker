@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_mount_bind_options
 import model_mount_tmpfs_options

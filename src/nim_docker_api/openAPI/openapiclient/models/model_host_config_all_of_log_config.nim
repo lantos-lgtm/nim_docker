@@ -8,9 +8,9 @@
 #
 
 
+
+
 import tables
-
-
 
 type `Type`* {.pure.} = enum
   JsonFile

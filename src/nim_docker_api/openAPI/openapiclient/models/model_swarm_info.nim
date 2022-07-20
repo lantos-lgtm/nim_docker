@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_cluster_info
 import model_local_node_state

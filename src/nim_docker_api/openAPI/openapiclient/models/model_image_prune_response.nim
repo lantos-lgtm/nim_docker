@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_image_delete_response_item
 

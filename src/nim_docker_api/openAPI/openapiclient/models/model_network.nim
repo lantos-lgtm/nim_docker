@@ -8,10 +8,10 @@
 #
 
 
-import tables
+
 
 import model_ipam
-
+import tables
 import model_network_container
 
 type Network* = object

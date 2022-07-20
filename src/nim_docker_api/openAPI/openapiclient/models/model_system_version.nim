@@ -8,7 +8,7 @@
 #
 
 
-import tables
+
 
 import model_system_version_components_inner
 import model_system_version_platform
