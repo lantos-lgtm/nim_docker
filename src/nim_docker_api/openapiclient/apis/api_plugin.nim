@@ -9,35 +9,37 @@
 
 import httpclient
 import json
-import logging
-import marshal
+# import logging
+# import marshal
+import jsony
+import api_utils
 import options
 import strformat
 import strutils
-import tables
+# import tables
 import typetraits
 import uri
 
-import ../models/model_error_response
+# import ../models/model_error_response
 import ../models/model_plugin
 import ../models/model_plugin_privilege
 
 const basepath = "http://localhost/v1.41"
 
-template constructResult[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    try:
-      when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-        (some(json.to(parseJson(response.body), T.typedesc)), response)
-      else:
-        (some(marshal.to[T](response.body)), response)
-    except JsonParsingError:
-      # The server returned a malformed response though the response code is 2XX
-      # TODO: need better error handling
-      error("JsonParsingError")
-      (none(T.typedesc), response)
-  else:
-    (none(T.typedesc), response)
+# template constructResult[T](response: Response): untyped =
+#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
+#     try:
+#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
+#         (some(json.to(parseJson(response.body), T.typedesc)), response)
+#       else:
+#         (some(marshal.to[T](response.body)), response)
+#     except JsonParsingError:
+#       # The server returned a malformed response though the response code is 2XX
+#       # TODO: need better error handling
+#       error("JsonParsingError")
+#       (none(T.typedesc), response)
+#   else:
+#     (none(T.typedesc), response)
 
 
 proc getPluginPrivileges*(httpClient: HttpClient, remote: string): (Option[seq[PluginPrivilege]], Response) =

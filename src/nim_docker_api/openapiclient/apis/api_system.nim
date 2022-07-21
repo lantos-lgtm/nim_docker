@@ -8,9 +8,11 @@
 #
 
 import httpclient
-import json
-import logging
-import marshal
+# import json
+# import logging
+# import marshal
+import jsony
+import api_utils
 import options
 import strformat
 import strutils
@@ -19,7 +21,7 @@ import typetraits
 import uri
 
 import ../models/model_auth_config
-import ../models/model_error_response
+# import ../models/model_error_response
 import ../models/model_event_message
 import ../models/model_system_auth_response
 import ../models/model_system_data_usage_response
@@ -28,27 +30,28 @@ import ../models/model_system_version
 
 const basepath = "http://localhost/v1.41"
 
-template constructResult[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    try:
-      when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-        (some(json.to(parseJson(response.body), T.typedesc)), response)
-      else:
-        (some(marshal.to[T](response.body)), response)
-    except JsonParsingError:
-      # The server returned a malformed response though the response code is 2XX
-      # TODO: need better error handling
-      error("JsonParsingError")
-      (none(T.typedesc), response)
-  else:
-    (none(T.typedesc), response)
+# template constructResult[T](response: Response): untyped =
+#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
+#     try:
+#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
+#         (some(json.to(parseJson(response.body), T.typedesc)), response)
+#       else:
+#         (some(marshal.to[T](response.body)), response)
+#     except JsonParsingError:
+#       # The server returned a malformed response though the response code is 2XX
+#       # TODO: need better error handling
+#       error("JsonParsingError")
+#       (none(T.typedesc), response)
+#   else:
+#     (none(T.typedesc), response)
 
 
 proc systemAuth*(httpClient: HttpClient, authConfig: AuthConfig): (Option[SystemAuthResponse], Response) =
   ## Check auth configuration
   httpClient.headers["Content-Type"] = "application/json"
 
-  let response = httpClient.post(basepath & "/auth", $(%authConfig))
+  # let response = httpClient.post(basepath & "/auth", $(%authConfig))
+  let response = httpClient.post(basepath & "/auth", authConfig.toJson())
   constructResult[SystemAuthResponse](response)
 
 

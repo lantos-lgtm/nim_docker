@@ -34,7 +34,7 @@ proc initAsyncDocker*(baseUrl: string): AsyncDocker =
 
 
 
-proc containers*(
+proc containersList*(
             docker: Docker | AsyncDocker,
             all: bool = false
         ): Future[seq[Container]] {.multiSync.} =
@@ -42,6 +42,8 @@ proc containers*(
     let httpPath = "/containers/json" & (if all: "?all=true" else: "")
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
     let res = await docker.client.request(httpUrl, HttpGet, "", nil)
+    echo docker.client.headers
+    echo res.headers
     let body = await res.body
     case res.code():
     of Http200:
@@ -71,6 +73,7 @@ proc containerCreate*(
             config.toJson(), nil)
     case res.code():
     of Http201:
+        echo await res.body()
         return (await res.body()).fromJson(CreateResponse)
     of Http400:
         raise newException(BadRequest, await res.body())
@@ -124,10 +127,9 @@ proc containerStart*(
             HttpMethod.HttpPost,
             # options.toJson(), options in start is depreciated
         "",
-        nil
     )
     case res.code():
-    of Http200:
+    of Http204:
         return
     of Http304:
         raise newException(NotModified, "Container already started")
@@ -149,7 +151,6 @@ proc containerStop*(
             httpUrl,
             HttpMethod.HttpPost,
             options.toJson(),
-            nil,
         )
     case res.code():
     of Http204:
@@ -191,18 +192,24 @@ proc containerRemove*(
             docker: Docker | AsyncDocker,
             id: string, # name or id
             options = ContainerRemoveOptions(v: true, force: true, link: true)
-    ): Future[string] {.multiSync.} =
+    ): Future[void] {.multiSync.} =
 
     let httpPath = "/containers/" & id
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
-    echo options.toJson()
     let res = await docker.client.request(
             httpUrl,
             HttpMethod.HttpDelete,
             options.toJson(),
-            nil,
         )
-    return await res.body()
+    case res.code()
+    of Http204:
+        return
+    of Http404:
+        raise newException(BadRequest, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
 
 
 # this is a stream need to change it to a stream
@@ -218,9 +225,16 @@ proc containerStats*(
             httpUrl,
             HttpMethod.HttpGet,
             options.toJson(),
-            nil,
         )
-    return res.bodyStream
+    case res.code():
+    of Http200:
+        return res.bodyStream
+    of Http404:
+        raise newException(BadRequest, res.body())
+    of Http500:
+        raise newException(ServerError, res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
 
 
 # this is a stream need to change it to a stream
@@ -235,10 +249,16 @@ proc containerStats*(
             httpUrl,
             HttpMethod.HttpGet,
             options.toJson(),
-            nil,
         )
-    return res.bodyStream    
-
+    case res.code():
+    of Http200:
+        return res.bodyStream
+    of Http404:
+        raise newException(BadRequest, await res.body())
+    of Http500:
+        raise newException(ServerError, await res.body())
+    else:
+        raise newException(DockerError, "Unexpected response code: " & $res.code())
 
 proc calculateCPUPercentUNIX(stats: ContainerStats): float64 =
     var

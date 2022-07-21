@@ -10,7 +10,9 @@
 import httpclient
 import json
 import logging
-import marshal
+# import marshal
+# import jsony
+import api_utils
 import options
 import strformat
 import strutils
@@ -20,7 +22,7 @@ import uri
 
 import ../models/model_build_prune_response
 import ../models/model_container_config
-import ../models/model_error_response
+# import ../models/model_error_response
 import ../models/model_history_response_item
 import ../models/model_id_response
 import ../models/model_image_delete_response_item
@@ -31,20 +33,20 @@ import ../models/model_image_summary
 
 const basepath = "http://localhost/v1.41"
 
-template constructResult[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    try:
-      when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-        (some(json.to(parseJson(response.body), T.typedesc)), response)
-      else:
-        (some(marshal.to[T](response.body)), response)
-    except JsonParsingError:
-      # The server returned a malformed response though the response code is 2XX
-      # TODO: need better error handling
-      error("JsonParsingError")
-      (none(T.typedesc), response)
-  else:
-    (none(T.typedesc), response)
+# template constructResult[T](response: Response): untyped =
+#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
+#     try:
+#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
+#         (some(json.to(parseJson(response.body), T.typedesc)), response)
+#       else:
+#         (some(marshal.to[T](response.body)), response)
+#     except JsonParsingError:
+#       # The server returned a malformed response though the response code is 2XX
+#       # TODO: need better error handling
+#       error("JsonParsingError")
+#       (none(T.typedesc), response)
+#   else:
+#     (none(T.typedesc), response)
 
 
 proc buildPrune*(httpClient: HttpClient, keepStorage: int64, all: bool, filters: string): (Option[BuildPruneResponse], Response) =

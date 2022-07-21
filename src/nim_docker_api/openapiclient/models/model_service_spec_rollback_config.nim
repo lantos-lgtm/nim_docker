@@ -25,7 +25,7 @@ type FailureAction* {.pure.} = enum
 
 type Order* {.pure.} = enum
   StopFirst = "stop-first"
-  StartFirst "start-first"
+  StartFirst = "start-first"
 
 type ServiceSpecRollbackConfig* = object
   ## Specification for the rollback strategy of the service.

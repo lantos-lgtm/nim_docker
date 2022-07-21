@@ -10,7 +10,9 @@
 import httpclient
 import json
 import logging
-import marshal
+# import marshal
+import jsony
+import api_utils
 import options
 import strformat
 import strutils
@@ -18,69 +20,66 @@ import tables
 import typetraits
 import uri
 
+import ../models/model_config
+import ../models/model_config_create_request
+import ../models/model_config_spec
 import ../models/model_error_response
-import ../models/model_volume
-import ../models/model_volume_create_options
-import ../models/model_volume_list_response
-import ../models/model_volume_prune_response
+import ../models/model_id_response
 
 const basepath = "http://localhost/v1.41"
 
-template constructResult[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    try:
-      when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-        (some(json.to(parseJson(response.body), T.typedesc)), response)
-      else:
-        (some(marshal.to[T](response.body)), response)
-    except JsonParsingError:
-      # The server returned a malformed response though the response code is 2XX
-      # TODO: need better error handling
-      error("JsonParsingError")
-      (none(T.typedesc), response)
-  else:
-    (none(T.typedesc), response)
+# template constructResult[T](response: Response): untyped =
+#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
+#     try:
+#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
+#         (some(json.to(parseJson(response.body), T.typedesc)), response)
+#       else:
+#         (some(marshal.to[T](response.body)), response)
+#     except JsonParsingError:
+#       # The server returned a malformed response though the response code is 2XX
+#       # TODO: need better error handling
+#       error("JsonParsingError")
+#       (none(T.typedesc), response)
+#   else:
+#     (none(T.typedesc), response)
 
 
-proc volumeCreate*(httpClient: HttpClient, volumeConfig: VolumeCreateOptions): (Option[Volume], Response) =
-  ## Create a volume
+
+proc configCreate*(httpClient: HttpClient, body: ConfigCreateRequest): (Option[IdResponse], Response) =
+  ## Create a config
   httpClient.headers["Content-Type"] = "application/json"
 
-  let response = httpClient.post(basepath & "/volumes/create", $(%volumeConfig))
-  constructResult[Volume](response)
+  let response = httpClient.post(basepath & "/configs/create", $(%body))
+  constructResult[IdResponse](response)
 
 
-proc volumeDelete*(httpClient: HttpClient, name: string, force: bool): Response =
-  ## Remove a volume
+proc configDelete*(httpClient: HttpClient, id: string): Response =
+  ## Delete a config
+  httpClient.delete(basepath & fmt"/configs/{id}")
+
+
+proc configInspect*(httpClient: HttpClient, id: string): (Option[Config], Response) =
+  ## Inspect a config
+
+  let response = httpClient.get(basepath & fmt"/configs/{id}")
+  constructResult[Config](response)
+
+
+proc configList*(httpClient: HttpClient, filters: string): (Option[seq[Config]], Response) =
+  ## List configs
   let query_for_api_call = encodeQuery([
-    ("force", $force), # Force the removal of the volume
-  ])
-  httpClient.delete(basepath & fmt"/volumes/{name}" & "?" & query_for_api_call)
-
-
-proc volumeInspect*(httpClient: HttpClient, name: string): (Option[Volume], Response) =
-  ## Inspect a volume
-
-  let response = httpClient.get(basepath & fmt"/volumes/{name}")
-  constructResult[Volume](response)
-
-
-proc volumeList*(httpClient: HttpClient, filters: string): (Option[VolumeListResponse], Response) =
-  ## List volumes
-  let query_for_api_call = encodeQuery([
-    ("filters", $filters), # JSON encoded value of the filters (a `map[string][]string`) to process on the volumes list. Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), returns all    volumes that are not in use by a container. When set to `false`    (or `0`), only volumes that are in use by one or more    containers are returned. - `driver=<volume-driver-name>` Matches volumes based on their driver. - `label=<key>` or `label=<key>:<value>` Matches volumes based on    the presence of a `label` alone or a `label` and a value. - `name=<volume-name>` Matches all or part of a volume name. 
+    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the configs list.  Available filters:  - `id=<config id>` - `label=<key> or label=<key>=value` - `name=<config name>` - `names=<config name>` 
   ])
 
-  let response = httpClient.get(basepath & "/volumes" & "?" & query_for_api_call)
-  constructResult[VolumeListResponse](response)
+  let response = httpClient.get(basepath & "/configs" & "?" & query_for_api_call)
+  constructResult[seq[Config]](response)
 
 
-proc volumePrune*(httpClient: HttpClient, filters: string): (Option[VolumePruneResponse], Response) =
-  ## Delete unused volumes
+proc configUpdate*(httpClient: HttpClient, id: string, version: int64, body: ConfigSpec): Response =
+  ## Update a Config
+  httpClient.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
-    ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune volumes with (or without, in case `label!=...` is used) the specified labels. 
+    ("version", $version), # The version number of the config object being updated. This is required to avoid conflicting writes. 
   ])
-
-  let response = httpClient.post(basepath & "/volumes/prune" & "?" & query_for_api_call)
-  constructResult[VolumePruneResponse](response)
+  httpClient.post(basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, $(%body))
 

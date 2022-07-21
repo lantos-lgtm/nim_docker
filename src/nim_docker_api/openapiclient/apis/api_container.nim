@@ -9,9 +9,10 @@
 
 import httpclient
 import json
-import logging
+# import logging
 # import marshal
 import jsony
+import api_utils
 import options
 import strformat
 import strutils
@@ -29,10 +30,12 @@ import ../models/model_container_top_response
 import ../models/model_container_update_response
 import ../models/model_container_update_request
 import ../models/model_container_wait_response
-import ../models/model_error_response
+import ../models/model_container_stats
+# import ../models/model_error_response
 # import ../models/model_object
 
-const basepath = "http://localhost/v1.41"
+# const basepath = "http://localhost/v1.41"
+const basepath = "unix:///var/run/docker.sock/v1.41"
 
 # template constructResult[T](response: Response): untyped =
 #   if response.code in {Http200, Http201, Http202, Http204, Http206}:
@@ -140,16 +143,19 @@ proc containerKill*(httpClient: HttpClient, id: string, signal: string): Respons
   httpClient.post(basepath & fmt"/containers/{id}/kill" & "?" & query_for_api_call)
 
 
-proc containerList*(httpClient: HttpClient, all: bool, limit: int, size: bool, filters: string): (Option[seq[ContainerSummary]], Response) =
+proc containerList*(httpClient: HttpClient, all: bool = false, limit: Option[int] = none(int), size: bool = false, filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])): (Option[seq[ContainerSummary]], Response) =
   ## List containers
   let query_for_api_call = encodeQuery([
     ("all", $all), # Return all containers. By default, only running containers are shown. 
-    ("limit", $limit), # Return this number of most recently created containers, including non-running ones. 
+    ("limit", limit), # Return this number of most recently created containers, including non-running ones. 
     ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
-    ("filters", $filters), # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
+    ("filters", filters.toJson()), # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
   ])
 
   let response = httpClient.get(basepath & "/containers/json" & "?" & query_for_api_call)
+  echo httpClient.headers
+  echo response.body()
+
   constructResult[seq[ContainerSummary]](response)
 
 
@@ -217,7 +223,7 @@ proc containerStart*(httpClient: HttpClient, id: string, detachKeys: string): Re
   httpClient.post(basepath & fmt"/containers/{id}/start" & "?" & query_for_api_call)
 
 
-proc containerStats*(httpClient: HttpClient, id: string, stream: bool, oneShot: bool): (Option[object], Response) =
+proc containerStats*(httpClient: HttpClient, id: string, stream: bool, oneShot: bool): (Option[ContainerStats], Response) =
   ## Get container stats based on resource usage
   let query_for_api_call = encodeQuery([
     ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect. 
@@ -225,7 +231,7 @@ proc containerStats*(httpClient: HttpClient, id: string, stream: bool, oneShot: 
   ])
 
   let response = httpClient.get(basepath & fmt"/containers/{id}/stats" & "?" & query_for_api_call)
-  constructResult[object](response)
+  constructResult[ContainerStats](response)
 
 
 proc containerStop*(httpClient: HttpClient, id: string, t: int): Response =
@@ -278,4 +284,3 @@ proc putContainerArchive*(httpClient: HttpClient, id: string, path: string, inpu
     ("copyUIDGID", $copyUIDGID), # If `1`, `true`, then it will copy UID/GID maps to the dest file or dir 
   ])
   httpClient.put(basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, $(%inputStream))
-

@@ -8,17 +8,19 @@
 #
 
 import httpclient
-import json
-import logging
-import marshal
+# import json
+# import logging
+# import marshal
+import jsony
+import api_utils
 import options
-import strformat
+# import strformat
 import strutils
 import tables
 import typetraits
 import uri
 
-import ../models/model_error_response
+# import ../models/model_error_response
 import ../models/model_swarm
 import ../models/model_swarm_init_request
 import ../models/model_swarm_join_request
@@ -28,27 +30,28 @@ import ../models/model_unlock_key_response
 
 const basepath = "http://localhost/v1.41"
 
-template constructResult[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    try:
-      when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-        (some(json.to(parseJson(response.body), T.typedesc)), response)
-      else:
-        (some(marshal.to[T](response.body)), response)
-    except JsonParsingError:
-      # The server returned a malformed response though the response code is 2XX
-      # TODO: need better error handling
-      error("JsonParsingError")
-      (none(T.typedesc), response)
-  else:
-    (none(T.typedesc), response)
+# template constructResult[T](response: Response): untyped =
+#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
+#     try:
+#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
+#         (some(json.to(parseJson(response.body), T.typedesc)), response)
+#       else:
+#         (some(marshal.to[T](response.body)), response)
+#     except JsonParsingError:
+#       # The server returned a malformed response though the response code is 2XX
+#       # TODO: need better error handling
+#       error("JsonParsingError")
+#       (none(T.typedesc), response)
+#   else:
+#     (none(T.typedesc), response)
 
 
 proc swarmInit*(httpClient: HttpClient, body: SwarmInitRequest): (Option[string], Response) =
   ## Initialize a new swarm
   httpClient.headers["Content-Type"] = "application/json"
 
-  let response = httpClient.post(basepath & "/swarm/init", $(%body))
+  # let response = httpClient.post(basepath & "/swarm/init", $(%body))
+  let response = httpClient.post(basepath & "/swarm/init", body.toJson())
   constructResult[string](response)
 
 
@@ -62,7 +65,8 @@ proc swarmInspect*(httpClient: HttpClient): (Option[Swarm], Response) =
 proc swarmJoin*(httpClient: HttpClient, body: SwarmJoinRequest): Response =
   ## Join an existing swarm
   httpClient.headers["Content-Type"] = "application/json"
-  httpClient.post(basepath & "/swarm/join", $(%body))
+  # httpClient.post(basepath & "/swarm/join", $(%body))
+  httpClient.post(basepath & "/swarm/join", body.toJson())
 
 
 proc swarmLeave*(httpClient: HttpClient, force: bool): Response =
@@ -76,7 +80,8 @@ proc swarmLeave*(httpClient: HttpClient, force: bool): Response =
 proc swarmUnlock*(httpClient: HttpClient, body: SwarmUnlockRequest): Response =
   ## Unlock a locked manager
   httpClient.headers["Content-Type"] = "application/json"
-  httpClient.post(basepath & "/swarm/unlock", $(%body))
+  # httpClient.post(basepath & "/swarm/unlock", $(%body))
+  httpClient.post(basepath & "/swarm/unlock", body.toJson())
 
 
 proc swarmUnlockkey*(httpClient: HttpClient): (Option[UnlockKeyResponse], Response) =
@@ -95,5 +100,6 @@ proc swarmUpdate*(httpClient: HttpClient, version: int64, body: SwarmSpec, rotat
     ("rotateManagerToken", $rotateManagerToken), # Rotate the manager join token.
     ("rotateManagerUnlockKey", $rotateManagerUnlockKey), # Rotate the manager unlock key.
   ])
-  httpClient.post(basepath & "/swarm/update" & "?" & query_for_api_call, $(%body))
+  # httpClient.post(basepath & "/swarm/update" & "?" & query_for_api_call, $(%body))
+  httpClient.post(basepath & "/swarm/update" & "?" & query_for_api_call, body.toJson())
 

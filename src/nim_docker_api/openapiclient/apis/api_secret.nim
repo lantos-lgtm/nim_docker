@@ -9,8 +9,10 @@
 
 import httpclient
 import json
-import logging
-import marshal
+# import logging
+# import marshal
+import jsony
+import api_utils
 import options
 import strformat
 import strutils
@@ -18,58 +20,65 @@ import tables
 import typetraits
 import uri
 
-import ../models/model_error_response
-import ../models/model_node
-import ../models/model_node_spec
+# import ../models/model_error_response
+import ../models/model_id_response
+import ../models/model_secret
+import ../models/model_secret_create_request
+import ../models/model_secret_spec
 
 const basepath = "http://localhost/v1.41"
 
-template constructResult[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    try:
-      when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-        (some(json.to(parseJson(response.body), T.typedesc)), response)
-      else:
-        (some(marshal.to[T](response.body)), response)
-    except JsonParsingError:
-      # The server returned a malformed response though the response code is 2XX
-      # TODO: need better error handling
-      error("JsonParsingError")
-      (none(T.typedesc), response)
-  else:
-    (none(T.typedesc), response)
+# template constructResult[T](response: Response): untyped =
+#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
+#     try:
+#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
+#         (some(json.to(parseJson(response.body), T.typedesc)), response)
+#       else:
+#         (some(marshal.to[T](response.body)), response)
+#     except JsonParsingError:
+#       # The server returned a malformed response though the response code is 2XX
+#       # TODO: need better error handling
+#       error("JsonParsingError")
+#       (none(T.typedesc), response)
+#   else:
+#     (none(T.typedesc), response)
 
 
-proc nodeDelete*(httpClient: HttpClient, id: string, force: bool): Response =
-  ## Delete a node
+proc secretCreate*(httpClient: HttpClient, body: SecretCreateRequest): (Option[IdResponse], Response) =
+  ## Create a secret
+  httpClient.headers["Content-Type"] = "application/json"
+
+  let response = httpClient.post(basepath & "/secrets/create", $(%body))
+  constructResult[IdResponse](response)
+
+
+proc secretDelete*(httpClient: HttpClient, id: string): Response =
+  ## Delete a secret
+  httpClient.delete(basepath & fmt"/secrets/{id}")
+
+
+proc secretInspect*(httpClient: HttpClient, id: string): (Option[Secret], Response) =
+  ## Inspect a secret
+
+  let response = httpClient.get(basepath & fmt"/secrets/{id}")
+  constructResult[Secret](response)
+
+
+proc secretList*(httpClient: HttpClient, filters: string): (Option[seq[Secret]], Response) =
+  ## List secrets
   let query_for_api_call = encodeQuery([
-    ("force", $force), # Force remove a node from the swarm
-  ])
-  httpClient.delete(basepath & fmt"/nodes/{id}" & "?" & query_for_api_call)
-
-
-proc nodeInspect*(httpClient: HttpClient, id: string): (Option[Node], Response) =
-  ## Inspect a node
-
-  let response = httpClient.get(basepath & fmt"/nodes/{id}")
-  constructResult[Node](response)
-
-
-proc nodeList*(httpClient: HttpClient, filters: string): (Option[seq[Node]], Response) =
-  ## List nodes
-  let query_for_api_call = encodeQuery([
-    ("filters", $filters), # Filters to process on the nodes list, encoded as JSON (a `map[string][]string`).  Available filters: - `id=<node id>` - `label=<engine label>` - `membership=`(`accepted`|`pending`)` - `name=<node name>` - `node.label=<node label>` - `role=`(`manager`|`worker`)` 
+    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the secrets list.  Available filters:  - `id=<secret id>` - `label=<key> or label=<key>=value` - `name=<secret name>` - `names=<secret name>` 
   ])
 
-  let response = httpClient.get(basepath & "/nodes" & "?" & query_for_api_call)
-  constructResult[seq[Node]](response)
+  let response = httpClient.get(basepath & "/secrets" & "?" & query_for_api_call)
+  constructResult[seq[Secret]](response)
 
 
-proc nodeUpdate*(httpClient: HttpClient, id: string, version: int64, body: NodeSpec): Response =
-  ## Update a node
+proc secretUpdate*(httpClient: HttpClient, id: string, version: int64, body: SecretSpec): Response =
+  ## Update a Secret
   httpClient.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
-    ("version", $version), # The version number of the node object being updated. This is required to avoid conflicting writes. 
+    ("version", $version), # The version number of the secret object being updated. This is required to avoid conflicting writes. 
   ])
-  httpClient.post(basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call, $(%body))
+  httpClient.post(basepath & fmt"/secrets/{id}/update" & "?" & query_for_api_call, $(%body))
 

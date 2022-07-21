@@ -262,7 +262,7 @@ type
         link*: bool
 
     CreateResponse* = object
-        id*: string
+        Id*: string
         warnings*: seq[string]
 
     ContainerStatsOptions* = object
@@ -281,7 +281,7 @@ type
         preCpuStats*: CPUStats
         memoryStats*: MemoryStats
         name*: string
-        id*: string
+        Id*: string
         networks*: Table[string, NetworkStats]
 
     BlkioStats = object
