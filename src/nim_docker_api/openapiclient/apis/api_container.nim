@@ -37,6 +37,7 @@ import ../models/model_container_stats
 # const basepath = "http://localhost/v1.41"
 const basepath = "unix:///var/run/docker.sock/v1.41"
 
+export tables
 # template constructResult[T](response: Response): untyped =
 #   if response.code in {Http200, Http201, Http202, Http204, Http206}:
 #     try:
@@ -145,17 +146,24 @@ proc containerKill*(httpClient: HttpClient, id: string, signal: string): Respons
 
 proc containerList*(httpClient: HttpClient, all: bool = false, limit: Option[int] = none(int), size: bool = false, filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])): (Option[seq[ContainerSummary]], Response) =
   ## List containers
-  let query_for_api_call = encodeQuery([
-    ("all", $all), # Return all containers. By default, only running containers are shown. 
-    ("limit", limit), # Return this number of most recently created containers, including non-running ones. 
-    ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
-    ("filters", filters.toJson()), # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
-  ])
-
-  let response = httpClient.get(basepath & "/containers/json" & "?" & query_for_api_call)
-  echo httpClient.headers
+  # let query_for_api_call = encodeQuery([
+  #   ("all", $all), # Return all containers. By default, only running containers are shown. 
+  #   ("limit", limit), # Return this number of most recently created containers, including non-running ones. 
+  #   ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
+  #   ("filters", filters.toJson()), # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
+  # ])
+  var query_for_api_call_array: seq[(string, string)] = @[]
+  encode query_for_api_call_array:
+    all # Return all containers. By default, only running containers are shown. 
+    limit # Return this number of most recently created containers, including non-running ones. 
+    size # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
+    filters # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
+  let query_for_api_call = query_for_api_call_array.encodeQuery()
+  var uri = basepath & "/containers/json" & "?" & query_for_api_call 
+  # uri = "unix:///var/run/docker.sock/v1.41/containers/json"
+  echo uri
+  let response = httpClient.get(uri)
   echo response.body()
-
   constructResult[seq[ContainerSummary]](response)
 
 

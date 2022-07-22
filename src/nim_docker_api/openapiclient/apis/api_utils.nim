@@ -5,7 +5,6 @@ import macros
 import options
 import times
 import strutils
-import uri
 import tables
 
 # template constructResult[T](response: Response): untyped =
@@ -50,7 +49,6 @@ template constructResult*[T](response: Response): untyped =
     (some(response.body().fromJson(T.typedesc)), response)
   else:
     (none(T.typedesc), response)
-
     
 proc addEncode*[T](destination: var seq[(string, string)], name: string, value: T) =
   destination.add((name, value.toJson()))
@@ -76,7 +74,6 @@ macro encode*(dest: untyped, statements: untyped): untyped =
     # encode the string
     echo dest.encodeQuery()
 
-
   result = newStmtList()
   for statement in statements:
     echo "statement: " & $(statement)
@@ -91,4 +88,26 @@ macro encode*(dest: untyped, statements: untyped): untyped =
     result.add(exprNode)
 
 
+# simple coerce hook. if 1st char is Uppercase -> 1st char lowercase objectParsing then coerces to lowercase
+proc renameHook*(v: object, fieldName: var string) =
+  runnableExamples:
+    type
+      MyTest = object
+        id: string
+        myFancyField: string
 
+    var myJson = """
+    {
+      "Id": "someId",
+      "MyFancyField": "foo"
+    }
+    """
+    let myTest =  myJson.fromJson(MyTest)
+    echo myTest
+
+  var tempFieldName = fieldName
+  tempFieldName[0] = tempFieldName[0].toLowerAscii()
+  for x , _  in v.fieldPairs():
+    if tempFieldName == x:
+      fieldName = tempFieldName
+      return

@@ -13,12 +13,13 @@
 import model_endpoint_ipam_config
 #import model_map
 import tables
+import options
 
 type EndpointSettings* = object
   ## Configuration for a network endpoint.
   iPAMConfig*: EndpointIPAMConfig
-  links*: seq[string]
-  aliases*: seq[string]
+  links*: Option[seq[string]]
+  aliases*: Option[seq[string]]
   networkID*: string ## Unique ID of the network. 
   endpointID*: string ## Unique ID for the service endpoint in a Sandbox. 
   gateway*: string ## Gateway address for this network. 
@@ -28,4 +29,4 @@ type EndpointSettings* = object
   globalIPv6Address*: string ## Global IPv6 address. 
   globalIPv6PrefixLen*: int64 ## Mask length of the global IPv6 address. 
   macAddress*: string ## MAC address for the endpoint on this network. 
-  driverOpts*: Table[string, string] ## DriverOpts is a mapping of driver options and values. These options are passed directly to the driver and are driver specific. 
+  driverOpts*: Option[Table[string, string]] ## DriverOpts is a mapping of driver options and values. These options are passed directly to the driver and are driver specific. 
