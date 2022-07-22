@@ -44,7 +44,6 @@ proc containersList*(
     let res = await docker.client.request(httpUrl, HttpGet, "", nil)
     echo docker.client.headers
     echo res.headers
-    let body = await res.body
     case res.code():
     of Http200:
         return (await res.body()).fromJson(seq[Container])
