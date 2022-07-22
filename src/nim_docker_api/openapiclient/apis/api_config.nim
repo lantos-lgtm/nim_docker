@@ -25,6 +25,7 @@ import ../models/model_config_create_request
 import ../models/model_config_spec
 import ../models/model_error_response
 import ../models/model_id_response
+import api_utils
 
 const basepath = "http://localhost/v1.41"
 

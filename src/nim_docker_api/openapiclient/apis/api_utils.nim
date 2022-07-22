@@ -2,6 +2,9 @@ import jsony
 import typetraits
 import httpclient
 import macros
+import options
+import times
+import strutils
 
 # template constructResult[T](response: Response): untyped =
 #   if response.code in {Http200, Http201, Http202, Http204, Http206}:
@@ -18,9 +21,8 @@ import macros
 #   else:
 #     (none(T.typedesc), response)
 
-import
-    times,
-    strutils
+
+
 
 
 # parse hook to convert GO time.time.rfc3339nano to nim time
@@ -56,23 +58,27 @@ template encodeQuery*(args: varargs[untyped]): string =
         else:
             encodingStringArray.add((arg.name, arg.value))
 
-macro encode*(statements: untyped): untyped =
-    result = newStmtList()
-    for statement in statements:
-      echo "statement: " & $(statement)
-      let exprNode = newStmtList(
-          newCall(
-            newDotExpr(
-              newIdentNode("valuesToEncode"),
-              newIdentNode("add")
-            ),
-            newPar(
-                newStrLitNode(statement.strVal),
-                prefix(
-                  newIdentNode(statement.strVal),
-                  "$"
-                )
-              )
-          )
+
+
+proc addEncode*[T](destination: var seq[(string, string)], name: string, value: T) =
+  destination.add((name, $value))
+
+proc addEncode*[T](destination: var seq[(string, string)], name: string, value: Option[T]) =
+  if value.isSome():
+    destination.add((name, $value.get()))
+
+  
+
+macro encode*(dest: untyped, statements: untyped): untyped =
+  result = newStmtList()
+  for statement in statements:
+    echo "statement: " & $(statement)
+    let exprNode = newStmtList(
+        newCall(
+          newIdentNode("addEncode"),
+          newIdentNode(dest.strVal),
+          newStrLitNode(statement.strVal),
+          newIdentNode(statement.strVal)
         )
-      result.add(exprNode)
+      )
+    result.add(exprNode)
