@@ -5,6 +5,8 @@ import macros
 import options
 import times
 import strutils
+import uri
+import tables
 
 # template constructResult[T](response: Response): untyped =
 #   if response.code in {Http200, Http201, Http202, Http204, Http206}:
@@ -49,27 +51,32 @@ template constructResult*[T](response: Response): untyped =
   else:
     (none(T.typedesc), response)
 
-template encodeQuery*(args: varargs[untyped]): string =
-    var encodingStringArray: seq[(string, string)]
-    for arg in args:
-        if arg.type == Option:
-            if arg.isSome:
-                encodingStringArray.add((arg.name, arg.get()))
-        else:
-            encodingStringArray.add((arg.name, arg.value))
-
-
-
+    
 proc addEncode*[T](destination: var seq[(string, string)], name: string, value: T) =
-  destination.add((name, $value))
+  destination.add((name, value.toJson()))
 
 proc addEncode*[T](destination: var seq[(string, string)], name: string, value: Option[T]) =
   if value.isSome():
-    destination.add((name, $value.get()))
+    destination.add((name, (value.get()).toJson()))
 
-  
 
 macro encode*(dest: untyped, statements: untyped): untyped =
+  runnableExamples:
+    # create the destination for the string
+    var dest: seq[(string, string)] = @[]
+    # a bunch of data to encode
+    var a = "hello"
+    var aOption = some("helloOption")
+    var aTable = {"hello": "world"}.toTable()
+    # populate the destination
+    encode dest:
+      a
+      aOption
+      aTable
+    # encode the string
+    echo dest.encodeQuery()
+
+
   result = newStmtList()
   for statement in statements:
     echo "statement: " & $(statement)
@@ -82,3 +89,6 @@ macro encode*(dest: untyped, statements: untyped): untyped =
         )
       )
     result.add(exprNode)
+
+
+
