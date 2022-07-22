@@ -19,6 +19,8 @@ import strutils
 import tables
 import typetraits
 import uri
+import asyncdispatch
+import asyncnet
 
 import ../models/model_container_change_response_item
 import ../models/model_container_create_response
@@ -144,14 +146,9 @@ proc containerKill*(httpClient: HttpClient, id: string, signal: string): Respons
   httpClient.post(basepath & fmt"/containers/{id}/kill" & "?" & query_for_api_call)
 
 
-proc containerList*(httpClient: HttpClient, all: bool = false, limit: Option[int] = none(int), size: bool = false, filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])): (Option[seq[ContainerSummary]], Response) =
-  ## List containers
-  # let query_for_api_call = encodeQuery([
-  #   ("all", $all), # Return all containers. By default, only running containers are shown. 
-  #   ("limit", limit), # Return this number of most recently created containers, including non-running ones. 
-  #   ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
-  #   ("filters", filters.toJson()), # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
-  # ])
+proc containerList*(httpClient: HttpClient, all: bool = false,
+    limit: Option[int] = none(int), size: bool = false,
+    filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])): (Option[seq[ContainerSummary]], Response) =
   var query_for_api_call_array: seq[(string, string)] = @[]
   encode query_for_api_call_array:
     all # Return all containers. By default, only running containers are shown. 
@@ -159,25 +156,37 @@ proc containerList*(httpClient: HttpClient, all: bool = false, limit: Option[int
     size # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
     filters # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
   let query_for_api_call = query_for_api_call_array.encodeQuery()
-  var uri = basepath & "/containers/json" & "?" & query_for_api_call 
-  # uri = "unix:///var/run/docker.sock/v1.41/containers/json"
-  echo uri
-  let response = httpClient.get(uri)
-  echo response.body()
+  let response = httpClient.get(basepath & "/containers/json" & "?" & query_for_api_call)
   constructResult[seq[ContainerSummary]](response)
+
+proc containerList1*(httpClient: HttpClient | AsyncHttpClient , all: bool = false,
+    limit: Option[int] = none(int), size: bool = false,
+    filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])): Future[seq[ContainerSummary]] {.multiSync.} =
+  var query_for_api_call_array: seq[(string, string)] = @[]
+  encode query_for_api_call_array:
+    all # Return all containers. By default, only running containers are shown. 
+    limit # Return this number of most recently created containers, including non-running ones. 
+    size # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
+    filters # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
+  let query_for_api_call = query_for_api_call_array.encodeQuery()
+  let response = await httpClient.get(basepath & "/containers/json" & "?" & query_for_api_call)
+  return await constructResult2[seq[ContainerSummary]](response)
+
 
 
 proc containerLogs*(httpClient: HttpClient, id: string, follow: bool, stdout: bool, stderr: bool, since: int, until: int, timestamps: bool, tail: string): (Option[string], Response) =
   ## Get container logs
-  let query_for_api_call = encodeQuery([
-    ("follow", $follow), # Keep connection after returning logs.
-    ("stdout", $stdout), # Return logs from `stdout`
-    ("stderr", $stderr), # Return logs from `stderr`
-    ("since", $since), # Only return logs since this time, as a UNIX timestamp
-    ("until", $until), # Only return logs before this time, as a UNIX timestamp
-    ("timestamps", $timestamps), # Add timestamps to every log line
-    ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
-  ])
+  
+  var query_for_api_call_array: seq[(string, string)] = @[]
+  encode query_for_api_call_array:
+    follow # Keep connection after returning logs.
+    stdout # Return logs from `stdout`
+    stderr # Return logs from `stderr`
+    since # Only return logs since this time, as a UNIX timestamp
+    until # Only return logs before this time, as a UNIX timestamp
+    timestamps # Add timestamps to every log line
+    tail # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
+  let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = httpClient.get(basepath & fmt"/containers/{id}/logs" & "?" & query_for_api_call)
   constructResult[string](response)
@@ -223,12 +232,19 @@ proc containerRestart*(httpClient: HttpClient, id: string, t: int): Response =
   httpClient.post(basepath & fmt"/containers/{id}/restart" & "?" & query_for_api_call)
 
 
-proc containerStart*(httpClient: HttpClient, id: string, detachKeys: string): Response =
+proc containerStart*(httpClient: HttpClient, id: string, detachKeys: string): void =
   ## Start a container
   let query_for_api_call = encodeQuery([
     ("detachKeys", $detachKeys), # Override the key sequence for detaching a container. Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,` or `_`. 
   ])
-  httpClient.post(basepath & fmt"/containers/{id}/start" & "?" & query_for_api_call)
+  let response = httpClient.post(basepath & fmt"/containers/{id}/start" & "?" & query_for_api_call)
+  case response.code():
+  of {Http200, Http304}:
+    return
+  of Http404:
+    raise newException(NotFound, response.body())
+  else:
+    raise newException(ServerError, response.body())
 
 
 proc containerStats*(httpClient: HttpClient, id: string, stream: bool, oneShot: bool): (Option[ContainerStats], Response) =

@@ -6,6 +6,10 @@ import options
 import times
 import strutils
 import tables
+import streams
+import asyncstreams
+import asyncdispatch
+
 
 # template constructResult[T](response: Response): untyped =
 #   if response.code in {Http200, Http201, Http202, Http204, Http206}:
@@ -42,6 +46,37 @@ proc parseHook*(s: string, i: var int, v: var DateTime) =
             str = str[0..str.high-(30-str.len())]
             str.add("0".repeat(29-str.len()) & "Z")
         v = str.parse("yyyy-MM-dd'T'HH':'mm':'ss'.'fffffffff'Z'")
+
+
+
+type
+  DockerError* = object of CatchableError
+  BadRequest* = object of DockerError
+  NotFound* = object of DockerError
+  Conflict* = object of DockerError
+  NotModified* = object of DockerError
+  ServerError* = object of DockerError
+
+
+ 
+proc constructResult2*[T](response: Response | AsyncResponse): Future[T] {.multisync.}  =
+  case response.code():
+  of{Http200, Http201, Http202, Http204, Http206, Http304}:
+    when T is void:
+      return
+    elif T is string:
+      let body = await response.body()
+      return body
+    elif T is Stream or T is FutureStream[string]:
+      return response.bodyStream
+    else:
+        let body = await response.body()
+        return (body).fromJson(T.typedesc)
+  of Http404:
+    raise newException(NotFound, await response.body())
+  else:
+    raise newException(ServerError, await response.body())
+
 
 
 template constructResult*[T](response: Response): untyped =

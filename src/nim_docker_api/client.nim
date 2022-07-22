@@ -41,7 +41,7 @@ proc containersList*(
 
     let httpPath = "/containers/json" & (if all: "?all=true" else: "")
     let httpUrl = docker.baseUrl & "/" & docker.version & httpPath
-    let res = await docker.client.request(httpUrl, HttpGet, "", nil)
+    let res = await docker.client.request(httpUrl, HttpGet )
     echo docker.client.headers
     echo res.headers
     case res.code():
@@ -69,7 +69,7 @@ proc containerCreate*(
     let res = await docker.client.request(
             httpUrl,
             HttpMethod.HttpPost,
-            config.toJson(), nil)
+            config.toJson())
     case res.code():
     of Http201:
         echo await res.body()
