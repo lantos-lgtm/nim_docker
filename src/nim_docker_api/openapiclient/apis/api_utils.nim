@@ -59,7 +59,7 @@ type
 
 
  
-proc constructResult2*[T](response: Response | AsyncResponse): Future[T] {.multisync.}  =
+proc constructResult*[T](response: Response | AsyncResponse): Future[T] {.multisync.}  =
   case response.code():
   of{Http200, Http201, Http202, Http204, Http206, Http304}:
     when T is void:
@@ -71,7 +71,7 @@ proc constructResult2*[T](response: Response | AsyncResponse): Future[T] {.multi
       return response.bodyStream
     else:
         let body = await response.body()
-        return (body).fromJson(T.typedesc)
+        return (body).fromJson(T)
   of Http404:
     raise newException(NotFound, await response.body())
   else:
@@ -79,11 +79,11 @@ proc constructResult2*[T](response: Response | AsyncResponse): Future[T] {.multi
 
 
 
-template constructResult*[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    (some(response.body().fromJson(T.typedesc)), response)
-  else:
-    (none(T.typedesc), response)
+# template constructResult*[T](response: Response): untyped =
+#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
+#     (some(response.body().fromJson(T.typedesc)), response)
+#   else:
+#     (none(T.typedesc), response)
     
 proc addEncode*[T](destination: var seq[(string, string)], name: string, value: T) =
   destination.add((name, value.toJson()))
