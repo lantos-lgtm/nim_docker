@@ -36,11 +36,28 @@ docker run --rm \
 
 openAPI has no mapping for map... fixing
 
-find models/* "import json" replace "#import json"
-find models/* "import tables" replace "#import tables"
-find models/* "import models_map" replace "#import models_map
-import tables"
+find 
+```"import json"```
+replace
+```"#import json"```
+in
+```models/*``` 
 
+find 
+```"import tables"```
+replace
+```"#import tables"```
+in
+```models/*```
+
+find 
+```"import models_map"``` replace
+```
+#import models_map
+import tables
+```
+in
+```models/*```
 
 fix all enums in models, find % or $ and comment out json boiler plate
 e.g
@@ -87,10 +104,27 @@ type EndpointPortConfig* = object
 ```
 
 fix object type
-find import model_object in models
+replace ```import model_object``` 
+with ```#import model_object```
+in ```/models```
 
+replace:
+```
+  let query_for_api_call = encodeQuery([
+```
+with:
+```
+  var query_for_api_call_array: seq[(string, string)] = @[]
+  encode query_for_api_call_array:
+```
 
-
-
+replace
+```
+/\("\w+", \$(\w+)\),/
+```
+with
+```
+$1
+```
 
 <!-- need to deal with import object -->

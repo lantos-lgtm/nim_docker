@@ -31,20 +31,7 @@ proc constructResult1*[T](response: Response): T =
     raise newException(ServerError, response.body())
 
   
-proc constructResult1*[T](response: AsyncResponse): Future[T] {.async.}  =
-  case response.code():
-  of{Http200, Http201, Http202, Http204, Http206, Http304}:
-    when T is void:
-      return
-    elif T is FutureStream[string]:
-      return response.bodyStream
-    else:
-        let body = await response.body()
-        return (body).fromJson(T.typedesc)
-  of Http404:
-    raise newException(NotFound, await response.body())
-  else:
-    raise newException(ServerError, await response.body())
+proc constructResult1*[T](response: AsyncResponse): Future[T] {.async.}  
 
 template constructResult2*[T](response: Response | AsyncResponse): untyped  =
   case response.code():
@@ -64,7 +51,7 @@ template constructResult2*[T](response: Response | AsyncResponse): untyped  =
 
 proc getMyObjects*(client: HttpClient | AsyncHttpClient): Future[seq[ContainerSummary]] {.multiSync.} =
   let response = await client.get(basepath & "/containers/json")
-  return await constructResult1[seq[ContainerSummary]](response)
+  return await constructResult2[seq[ContainerSummary]](response)
 
 
 proc getMyObjects2*(client: HttpClient | AsyncHttpClient): Future[string] {.multiSync.} =
