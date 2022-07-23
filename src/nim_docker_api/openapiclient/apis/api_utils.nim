@@ -26,10 +26,6 @@ import asyncdispatch
 #   else:
 #     (none(T.typedesc), response)
 
-
-
-
-
 # parse hook to convert GO time.time.rfc3339nano to nim time
 proc parseHook*(s: string, i: var int, v: var DateTime) =
     var str: string
@@ -57,33 +53,29 @@ type
   NotModified* = object of DockerError
   ServerError* = object of DockerError
 
-
- 
-proc constructResult*[T](response: Response | AsyncResponse): Future[T] {.multisync.}  =
+# something to help with boilerplate
+template constructResult1*[T](response: Response | AsyncResponse): untyped  =
   case response.code():
   of{Http200, Http201, Http202, Http204, Http206, Http304}:
     when T is void:
       return
     elif T is string:
-      let body = await response.body()
-      return body
+      return response.body()
     elif T is Stream or T is FutureStream[string]:
       return response.bodyStream
     else:
-        let body = await response.body()
-        return (body).fromJson(T)
+        return (await response.body()).fromJson(T.typedesc)
   of Http404:
     raise newException(NotFound, await response.body())
   else:
     raise newException(ServerError, await response.body())
 
 
-
-# template constructResult*[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     (some(response.body().fromJson(T.typedesc)), response)
-#   else:
-#     (none(T.typedesc), response)
+template constructResult*[T](response: Response): untyped =
+  if response.code in {Http200, Http201, Http202, Http204, Http206}:
+    (some(response.body().fromJson(T.typedesc)), response)
+  else:
+    (none(T.typedesc), response)
     
 proc addEncode*[T](destination: var seq[(string, string)], name: string, value: T) =
   destination.add((name, value.toJson()))
