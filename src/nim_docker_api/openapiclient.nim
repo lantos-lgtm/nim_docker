@@ -406,7 +406,7 @@ export model_volume_usage_data
 
 # APIs
 import openapiclient/apis/api_config
-import openapiclient/apis_async/api_container
+import openapiclient/apis/api_container
 import openapiclient/apis/api_distribution
 import openapiclient/apis/api_exec
 import openapiclient/apis/api_image
@@ -419,7 +419,7 @@ import openapiclient/apis/api_session
 import openapiclient/apis/api_swarm
 import openapiclient/apis/api_system
 import openapiclient/apis/api_task
-import openapiclient/apis_async/api_utils
+import openapiclient/apis/api_utils
 import openapiclient/apis/api_volume
 
 export api_config
