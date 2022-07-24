@@ -9,7 +9,6 @@
 
 import httpclient
 import json
-import logging
 import jsony
 import api_utils
 import options
@@ -19,7 +18,6 @@ import tables
 import typetraits
 import uri
 
-import ../models/model_error_response
 import ../models/model_node
 import ../models/model_node_spec
 

@@ -79,7 +79,6 @@ macro encode*(dest: untyped, statements: untyped): untyped =
 
   result = newStmtList()
   for statement in statements:
-    echo "statement: " & $(statement)
     let exprNode = newStmtList(
         newCall(
           newIdentNode("addEncode"),

@@ -9,7 +9,6 @@
 
 import httpclient
 import json
-import logging
 import jsony
 import api_utils
 import options
@@ -22,7 +21,6 @@ import uri
 import ../models/model_config
 import ../models/model_config_create_request
 import ../models/model_config_spec
-import ../models/model_error_response
 import ../models/model_id_response
 import api_utils
 
