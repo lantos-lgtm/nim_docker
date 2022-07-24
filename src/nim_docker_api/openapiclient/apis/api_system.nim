@@ -8,9 +8,6 @@
 #
 
 import httpclient
-# import json
-# import logging
-# import marshal
 import jsony
 import api_utils
 import options
@@ -21,48 +18,32 @@ import typetraits
 import uri
 
 import ../models/model_auth_config
-# import ../models/model_error_response
 import ../models/model_event_message
 import ../models/model_system_auth_response
 import ../models/model_system_data_usage_response
 import ../models/model_system_info
 import ../models/model_system_version
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
+import asyncdispatch
 
 
-proc systemAuth*(httpClient: HttpClient, authConfig: AuthConfig): (Option[SystemAuthResponse], Response) =
+proc systemAuth*(docker: Docker | AsyncDocker, authConfig: AuthConfig): Future[SystemAuthResponse] {.multiSync.} =
   ## Check auth configuration
-  httpClient.headers["Content-Type"] = "application/json"
+  docker.client.headers["Content-Type"] = "application/json"
 
-  # let response = httpClient.post(basepath & "/auth", $(%authConfig))
-  let response = httpClient.post(basepath & "/auth", authConfig.toJson())
-  constructResult[SystemAuthResponse](response)
+  # let response = await docker.client.post(docker.basepath & "/auth", $(%authConfig))
+  let response = await docker.client.post(docker.basepath & "/auth", authConfig.toJson())
+  return await constructResult1[SystemAuthResponse](response)
 
 
-proc systemDataUsage*(httpClient: HttpClient): (Option[SystemDataUsageResponse], Response) =
+proc systemDataUsage*(docker: Docker | AsyncDocker): Future[SystemDataUsageResponse] {.multiSync.} =
   ## Get data usage information
 
-  let response = httpClient.get(basepath & "/system/df")
-  constructResult[SystemDataUsageResponse](response)
+  let response = await docker.client.get(docker.basepath & "/system/df")
+  return await constructResult1[SystemDataUsageResponse](response)
 
 
-proc systemEvents*(httpClient: HttpClient, since: string, until: string, filters: string): (Option[EventMessage], Response) =
+proc systemEvents*(docker: Docker | AsyncDocker, since: string, until: string, filters: string): Future[EventMessage] {.multiSync.} =
   ## Monitor events
   let query_for_api_call = encodeQuery([
     ("since", $since), # Show events created since this timestamp then stream new events.
@@ -70,34 +51,34 @@ proc systemEvents*(httpClient: HttpClient, since: string, until: string, filters
     ("filters", $filters), # A JSON encoded value of filters (a `map[string][]string`) to process on the event list. Available filters:  - `config=<string>` config name or ID - `container=<string>` container name or ID - `daemon=<string>` daemon name or ID - `event=<string>` event type - `image=<string>` image name or ID - `label=<string>` image or container label - `network=<string>` network name or ID - `node=<string>` node ID - `plugin`=<string> plugin name or ID - `scope`=<string> local or swarm - `secret=<string>` secret name or ID - `service=<string>` service name or ID - `type=<string>` object to filter by, one of `container`, `image`, `volume`, `network`, `daemon`, `plugin`, `node`, `service`, `secret` or `config` - `volume=<string>` volume name 
   ])
 
-  let response = httpClient.get(basepath & "/events" & "?" & query_for_api_call)
-  constructResult[EventMessage](response)
+  let response = await docker.client.get(docker.basepath & "/events" & "?" & query_for_api_call)
+  return await constructResult1[EventMessage](response)
 
 
-proc systemInfo*(httpClient: HttpClient): (Option[SystemInfo], Response) =
+proc systemInfo*(docker: Docker | AsyncDocker): Future[SystemInfo] {.multiSync.} =
   ## Get system information
 
-  let response = httpClient.get(basepath & "/info")
-  constructResult[SystemInfo](response)
+  let response = await docker.client.get(docker.basepath & "/info")
+  return await constructResult1[SystemInfo](response)
 
 
-proc systemPing*(httpClient: HttpClient): (Option[string], Response) =
+proc systemPing*(docker: Docker | AsyncDocker): Future[string] {.multiSync.} =
   ## Ping
 
-  let response = httpClient.get(basepath & "/_ping")
-  constructResult[string](response)
+  let response = await docker.client.get(docker.basepath & "/_ping")
+  return await constructResult1[string](response)
 
 
-proc systemPingHead*(httpClient: HttpClient): (Option[string], Response) =
+proc systemPingHead*(docker: Docker | AsyncDocker): Future[string] {.multiSync.} =
   ## Ping
 
-  let response = httpClient.head(basepath & "/_ping")
-  constructResult[string](response)
+  let response = await docker.client.head(docker.basepath & "/_ping")
+  return await constructResult1[string](response)
 
 
-proc systemVersion*(httpClient: HttpClient): (Option[SystemVersion], Response) =
+proc systemVersion*(docker: Docker | AsyncDocker): Future[SystemVersion] {.multiSync.} =
   ## Get version
 
-  let response = httpClient.get(basepath & "/version")
-  constructResult[SystemVersion](response)
+  let response = await docker.client.get(docker.basepath & "/version")
+  return await constructResult1[SystemVersion](response)
 

@@ -10,7 +10,6 @@
 import httpclient
 import json
 import logging
-# import marshal
 import jsony
 import api_utils
 import options
@@ -24,54 +23,39 @@ import ../models/model_error_response
 import ../models/model_node
 import ../models/model_node_spec
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
+import asyncdispatch
 
 
-proc nodeDelete*(httpClient: HttpClient, id: string, force: bool): Response =
+proc nodeDelete*(docker: Docker | AsyncDocker, id: string, force: bool): Response =
   ## Delete a node
   let query_for_api_call = encodeQuery([
     ("force", $force), # Force remove a node from the swarm
   ])
-  httpClient.delete(basepath & fmt"/nodes/{id}" & "?" & query_for_api_call)
+  await docker.client.delete(docker.basepath & fmt"/nodes/{id}" & "?" & query_for_api_call)
 
 
-proc nodeInspect*(httpClient: HttpClient, id: string): (Option[Node], Response) =
+proc nodeInspect*(docker: Docker | AsyncDocker, id: string): Future[Node] {.multiSync.} =
   ## Inspect a node
 
-  let response = httpClient.get(basepath & fmt"/nodes/{id}")
-  constructResult[Node](response)
+  let response = await docker.client.get(docker.basepath & fmt"/nodes/{id}")
+  return await constructResult1[Node](response)
 
 
-proc nodeList*(httpClient: HttpClient, filters: string): (Option[seq[Node]], Response) =
+proc nodeList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Node]] {.multiSync.} =
   ## List nodes
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # Filters to process on the nodes list, encoded as JSON (a `map[string][]string`).  Available filters: - `id=<node id>` - `label=<engine label>` - `membership=`(`accepted`|`pending`)` - `name=<node name>` - `node.label=<node label>` - `role=`(`manager`|`worker`)` 
   ])
 
-  let response = httpClient.get(basepath & "/nodes" & "?" & query_for_api_call)
-  constructResult[seq[Node]](response)
+  let response = await docker.client.get(docker.basepath & "/nodes" & "?" & query_for_api_call)
+  return await constructResult1[seq[Node]](response)
 
 
-proc nodeUpdate*(httpClient: HttpClient, id: string, version: int64, body: NodeSpec): Response =
+proc nodeUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: NodeSpec): Response =
   ## Update a node
-  httpClient.headers["Content-Type"] = "application/json"
+  docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the node object being updated. This is required to avoid conflicting writes. 
   ])
-  httpClient.post(basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call, $(%body))
+  await docker.client.post(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call, $(%body))
 

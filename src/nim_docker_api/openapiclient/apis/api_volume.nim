@@ -9,8 +9,6 @@
 
 import httpclient
 import json
-# import logging
-# import marshal
 import api_utils
 import options
 import strformat
@@ -18,70 +16,54 @@ import strutils
 import tables
 import typetraits
 import uri
+import asyncdispatch
 
-# import ../models/model_error_response
 import ../models/model_volume
 import ../models/model_volume_create_options
 import ../models/model_volume_list_response
 import ../models/model_volume_prune_response
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
 
 
-proc volumeCreate*(httpClient: HttpClient, volumeConfig: VolumeCreateOptions): (Option[Volume], Response) =
+proc volumeCreate*(docker: Docker | AsyncDocker, volumeConfig: VolumeCreateOptions): Future[Volume] {.multiSync.} =
   ## Create a volume
-  httpClient.headers["Content-Type"] = "application/json"
+  docker.client.headers["Content-Type"] = "application/json"
 
-  let response = httpClient.post(basepath & "/volumes/create", $(%volumeConfig))
-  constructResult[Volume](response)
+  let response = await docker.client.post(docker.basepath & "/volumes/create", $(%volumeConfig))
+  return await constructResult1[Volume](response)
 
 
-proc volumeDelete*(httpClient: HttpClient, name: string, force: bool): Response =
+proc volumeDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Response =
   ## Remove a volume
   let query_for_api_call = encodeQuery([
     ("force", $force), # Force the removal of the volume
   ])
-  httpClient.delete(basepath & fmt"/volumes/{name}" & "?" & query_for_api_call)
+  await docker.client.delete(docker.basepath & fmt"/volumes/{name}" & "?" & query_for_api_call)
 
 
-proc volumeInspect*(httpClient: HttpClient, name: string): (Option[Volume], Response) =
+proc volumeInspect*(docker: Docker | AsyncDocker, name: string): Future[Volume] {.multiSync.} =
   ## Inspect a volume
 
-  let response = httpClient.get(basepath & fmt"/volumes/{name}")
-  constructResult[Volume](response)
+  let response = await docker.client.get(docker.basepath & fmt"/volumes/{name}")
+  return await constructResult1[Volume](response)
 
 
-proc volumeList*(httpClient: HttpClient, filters: string): (Option[VolumeListResponse], Response) =
+proc volumeList*(docker: Docker | AsyncDocker, filters: string): Future[VolumeListResponse] {.multiSync.} =
   ## List volumes
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # JSON encoded value of the filters (a `map[string][]string`) to process on the volumes list. Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), returns all    volumes that are not in use by a container. When set to `false`    (or `0`), only volumes that are in use by one or more    containers are returned. - `driver=<volume-driver-name>` Matches volumes based on their driver. - `label=<key>` or `label=<key>:<value>` Matches volumes based on    the presence of a `label` alone or a `label` and a value. - `name=<volume-name>` Matches all or part of a volume name. 
   ])
 
-  let response = httpClient.get(basepath & "/volumes" & "?" & query_for_api_call)
-  constructResult[VolumeListResponse](response)
+  let response = await docker.client.get(docker.basepath & "/volumes" & "?" & query_for_api_call)
+  return await constructResult1[VolumeListResponse](response)
 
 
-proc volumePrune*(httpClient: HttpClient, filters: string): (Option[VolumePruneResponse], Response) =
+proc volumePrune*(docker: Docker | AsyncDocker, filters: string): Future[VolumePruneResponse] {.multiSync.} =
   ## Delete unused volumes
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune volumes with (or without, in case `label!=...` is used) the specified labels. 
   ])
 
-  let response = httpClient.post(basepath & "/volumes/prune" & "?" & query_for_api_call)
-  constructResult[VolumePruneResponse](response)
+  let response = await docker.client.post(docker.basepath & "/volumes/prune" & "?" & query_for_api_call)
+  return await constructResult1[VolumePruneResponse](response)
 

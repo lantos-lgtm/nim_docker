@@ -9,8 +9,6 @@
 
 import httpclient
 import json
-# import logging
-# import marshal
 import jsony
 import api_utils
 import options
@@ -20,67 +18,51 @@ import tables
 import typetraits
 import uri
 
-# import ../models/model_error_response
 import ../models/model_service
 import ../models/model_service_create_response
 import ../models/model_service_create_request
 import ../models/model_service_update_response
 import ../models/model_service_update_request
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
+import asyncdispatch
 
 
-proc serviceCreate*(httpClient: HttpClient, body: ServiceCreateRequest, xRegistryAuth: string): (Option[ServiceCreateResponse], Response) =
+proc serviceCreate*(docker: Docker | AsyncDocker, body: ServiceCreateRequest, xRegistryAuth: string): Future[ServiceCreateResponse] {.multiSync.} =
   ## Create a service
-  httpClient.headers["Content-Type"] = "application/json"
-  httpClient.headers["X-Registry-Auth"] = xRegistryAuth
+  docker.client.headers["Content-Type"] = "application/json"
+  docker.client.headers["X-Registry-Auth"] = xRegistryAuth
 
-  let response = httpClient.post(basepath & "/services/create", $(%body))
-  constructResult[ServiceCreateResponse](response)
+  let response = await docker.client.post(docker.basepath & "/services/create", $(%body))
+  return await constructResult1[ServiceCreateResponse](response)
 
 
-proc serviceDelete*(httpClient: HttpClient, id: string): Response =
+proc serviceDelete*(docker: Docker | AsyncDocker, id: string): Response =
   ## Delete a service
-  httpClient.delete(basepath & fmt"/services/{id}")
+  await docker.client.delete(docker.basepath & fmt"/services/{id}")
 
 
-proc serviceInspect*(httpClient: HttpClient, id: string, insertDefaults: bool): (Option[Service], Response) =
+proc serviceInspect*(docker: Docker | AsyncDocker, id: string, insertDefaults: bool): Future[Service] {.multiSync.} =
   ## Inspect a service
   let query_for_api_call = encodeQuery([
     ("insertDefaults", $insertDefaults), # Fill empty fields with default values.
   ])
 
-  let response = httpClient.get(basepath & fmt"/services/{id}" & "?" & query_for_api_call)
-  constructResult[Service](response)
+  let response = await docker.client.get(docker.basepath & fmt"/services/{id}" & "?" & query_for_api_call)
+  return await constructResult1[Service](response)
 
 
-proc serviceList*(httpClient: HttpClient, filters: string, status: bool): (Option[seq[Service]], Response) =
+proc serviceList*(docker: Docker | AsyncDocker, filters: string, status: bool): Future[seq[Service]] {.multiSync.} =
   ## List services
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the services list.  Available filters:  - `id=<service id>` - `label=<service label>` - `mode=[\"replicated\"|\"global\"]` - `name=<service name>` 
     ("status", $status), # Include service status, with count of running and desired tasks. 
   ])
 
-  let response = httpClient.get(basepath & "/services" & "?" & query_for_api_call)
-  constructResult[seq[Service]](response)
+  let response = await docker.client.get(docker.basepath & "/services" & "?" & query_for_api_call)
+  return await constructResult1[seq[Service]](response)
 
 
-proc serviceLogs*(httpClient: HttpClient, id: string, details: bool, follow: bool, stdout: bool, stderr: bool, since: int, timestamps: bool, tail: string): (Option[string], Response) =
+proc serviceLogs*(docker: Docker | AsyncDocker, id: string, details: bool, follow: bool, stdout: bool, stderr: bool, since: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
   ## Get service logs
   let query_for_api_call = encodeQuery([
     ("details", $details), # Show service context and extra details provided to logs.
@@ -92,20 +74,20 @@ proc serviceLogs*(httpClient: HttpClient, id: string, details: bool, follow: boo
     ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
   ])
 
-  let response = httpClient.get(basepath & fmt"/services/{id}/logs" & "?" & query_for_api_call)
-  constructResult[string](response)
+  let response = await docker.client.get(docker.basepath & fmt"/services/{id}/logs" & "?" & query_for_api_call)
+  return await constructResult1[string](response)
 
 
-proc serviceUpdate*(httpClient: HttpClient, id: string, version: int, body: ServiceUpdateRequest, registryAuthFrom: string, rollback: string, xRegistryAuth: string): (Option[ServiceUpdateResponse], Response) =
+proc serviceUpdate*(docker: Docker | AsyncDocker, id: string, version: int, body: ServiceUpdateRequest, registryAuthFrom: string, rollback: string, xRegistryAuth: string): Future[ServiceUpdateResponse] {.multiSync.} =
   ## Update a service
-  httpClient.headers["Content-Type"] = "application/json"
-  httpClient.headers["X-Registry-Auth"] = xRegistryAuth
+  docker.client.headers["Content-Type"] = "application/json"
+  docker.client.headers["X-Registry-Auth"] = xRegistryAuth
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the service object being updated. This is required to avoid conflicting writes. This version number should be the value as currently set on the service *before* the update. You can find the current version by calling `GET /services/{id}` 
     ("registryAuthFrom", $registryAuthFrom), # If the `X-Registry-Auth` header is not specified, this parameter indicates where to find registry authorization credentials. 
     ("rollback", $rollback), # Set to this parameter to `previous` to cause a server-side rollback to the previous service spec. The supplied spec will be ignored in this case. 
   ])
 
-  let response = httpClient.post(basepath & fmt"/services/{id}/update" & "?" & query_for_api_call, $(%body))
-  constructResult[ServiceUpdateResponse](response)
+  let response = await docker.client.post(docker.basepath & fmt"/services/{id}/update" & "?" & query_for_api_call, $(%body))
+  return await constructResult1[ServiceUpdateResponse](response)
 

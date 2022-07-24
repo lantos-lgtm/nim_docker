@@ -9,8 +9,6 @@
 
 import httpclient
 import json
-import logging
-# import marshal
 import jsony
 import api_utils
 import options
@@ -20,7 +18,6 @@ import tables
 import typetraits
 import uri
 
-# import ../models/model_error_response
 import ../models/model_network
 import ../models/model_network_connect_request
 import ../models/model_network_create_request
@@ -28,76 +25,61 @@ import ../models/model_network_create_response
 import ../models/model_network_disconnect_request
 import ../models/model_network_prune_response
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
+import asyncdispatch
 
 
-proc networkConnect*(httpClient: HttpClient, id: string, container: NetworkDisconnectRequest): Response =
+proc networkConnect*(docker: Docker | AsyncDocker, id: string, container: NetworkDisconnectRequest): Response =
   ## Connect a container to a network
-  httpClient.headers["Content-Type"] = "application/json"
-  httpClient.post(basepath & fmt"/networks/{id}/connect", $(%container))
+  docker.client.headers["Content-Type"] = "application/json"
+  await docker.client.post(docker.basepath & fmt"/networks/{id}/connect", $(%container))
 
 
-proc networkCreate*(httpClient: HttpClient, networkConfig: NetworkCreateRequest): (Option[NetworkCreateResponse], Response) =
+proc networkCreate*(docker: Docker | AsyncDocker, networkConfig: NetworkCreateRequest): Future[NetworkCreateResponse] {.multiSync.} =
   ## Create a network
-  httpClient.headers["Content-Type"] = "application/json"
+  docker.client.headers["Content-Type"] = "application/json"
 
-  let response = httpClient.post(basepath & "/networks/create", $(%networkConfig))
-  constructResult[NetworkCreateResponse](response)
+  let response = await docker.client.post(docker.basepath & "/networks/create", $(%networkConfig))
+  return await constructResult1[NetworkCreateResponse](response)
 
 
-proc networkDelete*(httpClient: HttpClient, id: string): Response =
+proc networkDelete*(docker: Docker | AsyncDocker, id: string): Response =
   ## Remove a network
-  httpClient.delete(basepath & fmt"/networks/{id}")
+  await docker.client.delete(docker.basepath & fmt"/networks/{id}")
 
 
-proc networkDisconnect*(httpClient: HttpClient, id: string, container: NetworkConnectRequest): Response =
+proc networkDisconnect*(docker: Docker | AsyncDocker, id: string, container: NetworkConnectRequest): Response =
   ## Disconnect a container from a network
-  httpClient.headers["Content-Type"] = "application/json"
-  httpClient.post(basepath & fmt"/networks/{id}/disconnect", $(%container))
+  docker.client.headers["Content-Type"] = "application/json"
+  await docker.client.post(docker.basepath & fmt"/networks/{id}/disconnect", $(%container))
 
 
-proc networkInspect*(httpClient: HttpClient, id: string, verbose: bool, scope: string): (Option[Network], Response) =
+proc networkInspect*(docker: Docker | AsyncDocker, id: string, verbose: bool, scope: string): Future[Network] {.multiSync.} =
   ## Inspect a network
   let query_for_api_call = encodeQuery([
     ("verbose", $verbose), # Detailed inspect output for troubleshooting
     ("scope", $scope), # Filter the network by scope (swarm, global, or local)
   ])
 
-  let response = httpClient.get(basepath & fmt"/networks/{id}" & "?" & query_for_api_call)
-  constructResult[Network](response)
+  let response = await docker.client.get(docker.basepath & fmt"/networks/{id}" & "?" & query_for_api_call)
+  return await constructResult1[Network](response)
 
 
-proc networkList*(httpClient: HttpClient, filters: string): (Option[seq[Network]], Response) =
+proc networkList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Network]] {.multiSync.} =
   ## List networks
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # JSON encoded value of the filters (a `map[string][]string`) to process on the networks list.  Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), returns all    networks that are not in use by a container. When set to `false`    (or `0`), only networks that are in use by one or more    containers are returned. - `driver=<driver-name>` Matches a network's driver. - `id=<network-id>` Matches all or part of a network ID. - `label=<key>` or `label=<key>=<value>` of a network label. - `name=<network-name>` Matches all or part of a network name. - `scope=[\"swarm\"|\"global\"|\"local\"]` Filters networks by scope (`swarm`, `global`, or `local`). - `type=[\"custom\"|\"builtin\"]` Filters networks by type. The `custom` keyword returns all user-defined networks. 
   ])
 
-  let response = httpClient.get(basepath & "/networks" & "?" & query_for_api_call)
-  constructResult[seq[Network]](response)
+  let response = await docker.client.get(docker.basepath & "/networks" & "?" & query_for_api_call)
+  return await constructResult1[seq[Network]](response)
 
 
-proc networkPrune*(httpClient: HttpClient, filters: string): (Option[NetworkPruneResponse], Response) =
+proc networkPrune*(docker: Docker | AsyncDocker, filters: string): Future[NetworkPruneResponse] {.multiSync.} =
   ## Delete unused networks
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `until=<timestamp>` Prune networks created before this timestamp. The `<timestamp>` can be Unix timestamps, date formatted timestamps, or Go duration strings (e.g. `10m`, `1h30m`) computed relative to the daemon machine’s time. - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune networks with (or without, in case `label!=...` is used) the specified labels. 
   ])
 
-  let response = httpClient.post(basepath & "/networks/prune" & "?" & query_for_api_call)
-  constructResult[NetworkPruneResponse](response)
+  let response = await docker.client.post(docker.basepath & "/networks/prune" & "?" & query_for_api_call)
+  return await constructResult1[NetworkPruneResponse](response)
 

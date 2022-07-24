@@ -10,7 +10,6 @@
 import httpclient
 import json
 import logging
-# import marshal
 import jsony
 import api_utils
 import options
@@ -27,60 +26,45 @@ import ../models/model_error_response
 import ../models/model_id_response
 import api_utils
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
+import asyncdispatch
 
 
 
-proc configCreate*(httpClient: HttpClient, body: ConfigCreateRequest): (Option[IdResponse], Response) =
+proc configCreate*(docker: Docker | AsyncDocker, body: ConfigCreateRequest): Future[IdResponse] {.multiSync.} =
   ## Create a config
-  httpClient.headers["Content-Type"] = "application/json"
+  docker.client.headers["Content-Type"] = "application/json"
 
-  let response = httpClient.post(basepath & "/configs/create", $(%body))
-  constructResult[IdResponse](response)
+  let response = await docker.client.post(docker.basepath & "/configs/create", $(%body))
+  return await constructResult1[IdResponse](response)
 
 
-proc configDelete*(httpClient: HttpClient, id: string): Response =
+proc configDelete*(docker: Docker | AsyncDocker, id: string): Response =
   ## Delete a config
-  httpClient.delete(basepath & fmt"/configs/{id}")
+  await docker.client.delete(docker.basepath & fmt"/configs/{id}")
 
 
-proc configInspect*(httpClient: HttpClient, id: string): (Option[Config], Response) =
+proc configInspect*(docker: Docker | AsyncDocker, id: string): Future[Config] {.multiSync.} =
   ## Inspect a config
 
-  let response = httpClient.get(basepath & fmt"/configs/{id}")
-  constructResult[Config](response)
+  let response = await docker.client.get(docker.basepath & fmt"/configs/{id}")
+  return await constructResult1[Config](response)
 
 
-proc configList*(httpClient: HttpClient, filters: string): (Option[seq[Config]], Response) =
+proc configList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Config]] {.multiSync.} =
   ## List configs
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the configs list.  Available filters:  - `id=<config id>` - `label=<key> or label=<key>=value` - `name=<config name>` - `names=<config name>` 
   ])
 
-  let response = httpClient.get(basepath & "/configs" & "?" & query_for_api_call)
-  constructResult[seq[Config]](response)
+  let response = await docker.client.get(docker.basepath & "/configs" & "?" & query_for_api_call)
+  return await constructResult1[seq[Config]](response)
 
 
-proc configUpdate*(httpClient: HttpClient, id: string, version: int64, body: ConfigSpec): Response =
+proc configUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: ConfigSpec): Response =
   ## Update a Config
-  httpClient.headers["Content-Type"] = "application/json"
+  docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the config object being updated. This is required to avoid conflicting writes. 
   ])
-  httpClient.post(basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, $(%body))
+  await docker.client.post(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, $(%body))
 

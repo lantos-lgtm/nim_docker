@@ -8,9 +8,6 @@
 #
 
 import httpclient
-# import json
-# import logging
-# import marshal
 import api_utils
 import options
 import strformat
@@ -18,46 +15,30 @@ import strutils
 import tables
 import typetraits
 import uri
+import asyncdispatch
 
-# import ../models/model_error_response
 import ../models/model_task
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
 
 
-proc taskInspect*(httpClient: HttpClient, id: string): (Option[Task], Response) =
+proc taskInspect*(docker: Docker | AsyncDocker, id: string): Future[Task] {.multiSync.} =
   ## Inspect a task
 
-  let response = httpClient.get(basepath & fmt"/tasks/{id}")
-  constructResult[Task](response)
+  let response = await docker.client.get(docker.basepath & fmt"/tasks/{id}")
+  return await constructResult1[Task](response)
 
 
-proc taskList*(httpClient: HttpClient, filters: string): (Option[seq[Task]], Response) =
+proc taskList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Task]] {.multiSync.} =
   ## List tasks
   let query_for_api_call = encodeQuery([
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the tasks list.  Available filters:  - `desired-state=(running | shutdown | accepted)` - `id=<task id>` - `label=key` or `label=\"key=value\"` - `name=<task name>` - `node=<node id or name>` - `service=<service name>` 
   ])
 
-  let response = httpClient.get(basepath & "/tasks" & "?" & query_for_api_call)
-  constructResult[seq[Task]](response)
+  let response = await docker.client.get(docker.basepath & "/tasks" & "?" & query_for_api_call)
+  return await constructResult1[seq[Task]](response)
 
 
-proc taskLogs*(httpClient: HttpClient, id: string, details: bool, follow: bool, stdout: bool, stderr: bool, since: int, timestamps: bool, tail: string): (Option[string], Response) =
+proc taskLogs*(docker: Docker | AsyncDocker, id: string, details: bool, follow: bool, stdout: bool, stderr: bool, since: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
   ## Get task logs
   let query_for_api_call = encodeQuery([
     ("details", $details), # Show task context and extra details provided to logs.
@@ -69,6 +50,6 @@ proc taskLogs*(httpClient: HttpClient, id: string, details: bool, follow: bool, 
     ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
   ])
 
-  let response = httpClient.get(basepath & fmt"/tasks/{id}/logs" & "?" & query_for_api_call)
-  constructResult[string](response)
+  let response = await docker.client.get(docker.basepath & fmt"/tasks/{id}/logs" & "?" & query_for_api_call)
+  return await constructResult1[string](response)
 

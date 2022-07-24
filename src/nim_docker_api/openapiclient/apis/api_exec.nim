@@ -9,67 +9,48 @@
 
 import httpclient
 import json
-import logging
-# import marshal
 import jsony
 import api_utils
 import options
 import strformat
 import strutils
-# import tables
 import typetraits
 import uri
 
-# import ../models/model_error_response
 import ../models/model_exec_config
 import ../models/model_exec_inspect_response
 import ../models/model_exec_start_config
 import ../models/model_id_response
 
-const basepath = "http://localhost/v1.41"
-
-# template constructResult[T](response: Response): untyped =
-#   if response.code in {Http200, Http201, Http202, Http204, Http206}:
-#     try:
-#       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
-#         (some(json.to(parseJson(response.body), T.typedesc)), response)
-#       else:
-#         (some(marshal.to[T](response.body)), response)
-#     except JsonParsingError:
-#       # The server returned a malformed response though the response code is 2XX
-#       # TODO: need better error handling
-#       error("JsonParsingError")
-#       (none(T.typedesc), response)
-#   else:
-#     (none(T.typedesc), response)
+import asyncdispatch
 
 
-proc containerExec*(httpClient: HttpClient, id: string, execConfig: ExecConfig): (Option[IdResponse], Response) =
+proc containerExec*(docker: Docker | AsyncDocker, id: string, execConfig: ExecConfig): Future[IdResponse] {.multiSync.} =
   ## Create an exec instance
-  httpClient.headers["Content-Type"] = "application/json"
+  docker.client.headers["Content-Type"] = "application/json"
 
-  let response = httpClient.post(basepath & fmt"/containers/{id}/exec", $(%execConfig))
-  constructResult[IdResponse](response)
+  let response = await docker.client.post(docker.basepath & fmt"/containers/{id}/exec", $(%execConfig))
+  return await constructResult1[IdResponse](response)
 
 
-proc execInspect*(httpClient: HttpClient, id: string): (Option[ExecInspectResponse], Response) =
+proc execInspect*(docker: Docker | AsyncDocker, id: string): Future[ExecInspectResponse] {.multiSync.} =
   ## Inspect an exec instance
 
-  let response = httpClient.get(basepath & fmt"/exec/{id}/json")
-  constructResult[ExecInspectResponse](response)
+  let response = await docker.client.get(docker.basepath & fmt"/exec/{id}/json")
+  return await constructResult1[ExecInspectResponse](response)
 
 
-proc execResize*(httpClient: HttpClient, id: string, h: int, w: int): Response =
+proc execResize*(docker: Docker | AsyncDocker, id: string, h: int, w: int): Response =
   ## Resize an exec instance
   let query_for_api_call = encodeQuery([
     ("h", $h), # Height of the TTY session in characters
     ("w", $w), # Width of the TTY session in characters
   ])
-  httpClient.post(basepath & fmt"/exec/{id}/resize" & "?" & query_for_api_call)
+  await docker.client.post(docker.basepath & fmt"/exec/{id}/resize" & "?" & query_for_api_call)
 
 
-proc execStart*(httpClient: HttpClient, id: string, execStartConfig: ExecStartConfig): Response =
+proc execStart*(docker: Docker | AsyncDocker, id: string, execStartConfig: ExecStartConfig): Response =
   ## Start an exec instance
-  httpClient.headers["Content-Type"] = "application/json"
-  httpClient.post(basepath & fmt"/exec/{id}/start", $(%execStartConfig))
+  docker.client.headers["Content-Type"] = "application/json"
+  await docker.client.post(docker.basepath & fmt"/exec/{id}/start", $(%execStartConfig))
 
