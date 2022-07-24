@@ -10,6 +10,7 @@
 import httpclient
 import logging
 import options
+import asyncdispatch
 
 import openapiclient
 
@@ -17,12 +18,19 @@ import openapiclient
 let logger = newConsoleLogger()
 addHandler(logger)
 
-let client = newHttpClient()
-client.headers = newHttpHeaders({
+
+var docker: AsyncDocker
+docker.client = newAsyncHttpClient()
+docker.basepath = "unix:///var/run/docker.sock/v1.41"
+docker.client.headers = newHttpHeaders({
     "User-Agent": "nimDocker",
     "Host": "v1.41",
     "Accept": "application/json",
     "Content-Type": "application/json",
 })
 
-echo client.containerList()
+proc main() {.async.} = 
+    let containers =  await docker.containerList()
+    echo containers
+
+waitFor main()

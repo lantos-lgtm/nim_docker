@@ -20,7 +20,6 @@ import tables
 import typetraits
 import uri
 import asyncdispatch
-import asyncnet
 
 import ../models/model_container_change_response_item
 import ../models/model_container_create_response
@@ -39,16 +38,10 @@ import ../models/model_container_stats
 # const basepath = "http://localhost/v1.41"
 # const basepath = "unix:///var/run/docker.sock/v1.41"
 
-type
-  Docker = object
-    client: HttpClient
-    basepath: string
-  AsyncDocker = object
-    client: AsyncHttpClient
-    basepath: string
+
 
 export tables
-# template constructResult1[T](response: Response): untyped =
+# template return await constructResult1[T](response: Response): untyped =
 #   if response.code in {Http200, Http201, Http202, Http204, Http206}:
 #     try:
 #       when name(stripGenericParams(T.typedesc).typedesc) == name(Table):
@@ -109,7 +102,7 @@ proc containerChanges*(docker: Docker | AsyncDocker, id: string): Future[seq[Con
   ## Get changes on a container’s filesystem
 
   let response = await docker.client.get(docker.basepath & fmt"/containers/{id}/changes")
-  constructResult1[seq[ContainerChangeResponseItem]](response)
+  return await constructResult1[seq[ContainerChangeResponseItem]](response)
 
 
 proc containerCreate*(docker: Docker | AsyncDocker, body: ContainerCreateRequest, name: string): Future[ContainerCreateResponse] {.multiSync.} =
@@ -121,7 +114,7 @@ proc containerCreate*(docker: Docker | AsyncDocker, body: ContainerCreateRequest
   let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = await docker.client.post(docker.basepath & "/containers/create" & "?" & query_for_api_call, $(%body))
-  constructResult1[ContainerCreateResponse](response)
+  return await constructResult1[ContainerCreateResponse](response)
 
 
 proc containerDelete*(docker: Docker | AsyncDocker, id: string, v: bool, force: bool, link: bool): Response =
@@ -148,7 +141,7 @@ proc containerInspect*(docker: Docker | AsyncDocker, id: string, size: bool): Fu
   let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = await docker.client.get(docker.basepath & fmt"/containers/{id}/json" & "?" & query_for_api_call)
-  constructResult1[ContainerInspectResponse](response)
+  return await constructResult1[ContainerInspectResponse](response)
 
 
 proc containerKill*(docker: Docker | AsyncDocker, id: string, signal: string): Response =
@@ -170,7 +163,7 @@ proc containerList*(docker: Docker | AsyncDocker, all: bool = false,
     filters # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
   let query_for_api_call = query_for_api_call_array.encodeQuery()
   let response = await docker.client.get(docker.basepath & "/containers/json" & "?" & query_for_api_call)
-  constructResult1[seq[ContainerSummary]](response)
+  return await constructResult1[seq[ContainerSummary]](response)
 
 
 
@@ -189,7 +182,7 @@ proc containerLogs*(docker: Docker | AsyncDocker, id: string, follow: bool, stdo
   let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = await docker.client.get(docker.basepath & fmt"/containers/{id}/logs" & "?" & query_for_api_call)
-  constructResult1[string](response)
+  return await constructResult1[string](response)
 
 
 proc containerPause*(docker: Docker | AsyncDocker, id: string): Response =
@@ -205,7 +198,7 @@ proc containerPrune*(docker: Docker | AsyncDocker, filters: string): Future[Cont
   let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = await docker.client.post(docker.basepath & "/containers/prune" & "?" & query_for_api_call)
-  constructResult1[ContainerPruneResponse](response)
+  return await constructResult1[ContainerPruneResponse](response)
 
 
 proc containerRename*(docker: Docker | AsyncDocker, id: string, name: string): Response =
@@ -265,7 +258,7 @@ proc containerStats*(docker: Docker | AsyncDocker, id: string, stream: bool, one
 
 
   let response = await docker.client.get(docker.basepath & fmt"/containers/{id}/stats" & "?" & query_for_api_call)
-  constructResult1[ContainerStats](response)
+  return await constructResult1[ContainerStats](response)
 
 
 proc containerStop*(docker: Docker | AsyncDocker, id: string, t: int): Response =
@@ -284,7 +277,7 @@ proc containerTop*(docker: Docker | AsyncDocker, id: string, psArgs: string): Fu
   let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = await docker.client.get(docker.basepath & fmt"/containers/{id}/top" & "?" & query_for_api_call)
-  constructResult1[ContainerTopResponse](response)
+  return await constructResult1[ContainerTopResponse](response)
 
 
 proc containerUnpause*(docker: Docker | AsyncDocker, id: string): Response =
@@ -297,7 +290,7 @@ proc containerUpdate*(docker: Docker | AsyncDocker, id: string, update: Containe
   docker.client.headers["Content-Type"] = "application/json"
 
   let response = await docker.client.post(docker.basepath & fmt"/containers/{id}/update", $(%update))
-  constructResult1[ContainerUpdateResponse](response)
+  return await constructResult1[ContainerUpdateResponse](response)
 
 
 proc containerWait*(docker: Docker | AsyncDocker, id: string, condition: string): Future[ContainerWaitResponse] {.multiSync.} =
@@ -308,7 +301,7 @@ proc containerWait*(docker: Docker | AsyncDocker, id: string, condition: string)
   let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = await docker.client.post(docker.basepath & fmt"/containers/{id}/wait" & "?" & query_for_api_call)
-  constructResult1[ContainerWaitResponse](response)
+  return await constructResult1[ContainerWaitResponse](response)
 
 
 proc putContainerArchive*(docker: Docker | AsyncDocker, id: string, path: string, inputStream: string, noOverwriteDirNonDir: string, copyUIDGID: string): Response =

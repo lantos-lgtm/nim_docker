@@ -53,24 +53,6 @@ type
   NotModified* = object of DockerError
   ServerError* = object of DockerError
 
-# something to help with boilerplate
-template constructResult1*[T](response: Response | AsyncResponse): untyped  =
-  case response.code():
-  of{Http200, Http201, Http202, Http204, Http206, Http304}:
-    when T is void:
-      return
-    elif T is string:
-      return response.body()
-    elif T is Stream or T is FutureStream[string]:
-      return response.bodyStream
-    else:
-        return (await response.body()).fromJson(T.typedesc)
-  of Http404:
-    raise newException(NotFound, await response.body())
-  else:
-    raise newException(ServerError, await response.body())
-
-
 template constructResult*[T](response: Response): untyped =
   if response.code in {Http200, Http201, Http202, Http204, Http206}:
     (some(response.body().fromJson(T.typedesc)), response)
