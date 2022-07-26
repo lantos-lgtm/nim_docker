@@ -5,6 +5,7 @@ import httpcore
 import strutils
 import uri
 import jsony
+import algorithm
 
 # > GET /containers/myContainer/stats HTTP/1.1
 # > Host: localhost
@@ -110,7 +111,6 @@ proc getData(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.}
 
     data = await client.socket.recvLine()
 
-
     return data
 
 proc getDataFull(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.} =
@@ -205,12 +205,27 @@ proc getHeaderResponse(client: HttpClient | AsyncHttpClient): Future[HttpHeaders
 
     return headers
 
+proc finds(val: string, find: string): seq[int]=
+    if find.len == 0:
+        return
+    if find.len > val.len:
+        return
+    for i in 0..val.high-find.len:
+        if val[i..i + find.len - 1] == find:
+            result.add(i)
+
 proc uriGetUnixSocketPath(uri: Uri): (string, string) =
     let conPath = uri.path
-    let dotPos =  conPath.find("/", conPath.find("."), conPath.len())
-    let socketPath = conPath[0..dotPos-1]
-    let urlPath = conPath[dotPos..conPath.high]
-    return (socketPath, urlPath)
+    # let dotPos =  conPath.find("/", conPath.find("."), conPath.len())
+    let dotPoses =  conPath.finds(".")
+    let lastDotPos = dotPoses[dotPoses.high]
+    let lastSlashAfterDot = conPath.find("/", lastDotPos)
+    var lastSlashPos = conPath.high
+    if lastSlashAfterDot != -1:
+        lastSlashPos = lastSlashAfterDot
+        return (conPath[0..lastSlashPos-1], conPath[lastSlashPos..conPath.high])
+    else:
+        return (conPath, "")
 
 proc initUnixSocket(uri: Uri | string): Socket =
     var tempUri: Uri
@@ -238,17 +253,37 @@ proc initAsyncUnixSocket(uri: Uri | string): Future[AsyncSocket] {.async.} =
     )
     await result.connectUnix(tempUri.uriGetUnixSocketPath()[0])
 
-
+# can I merge these two 
 proc initSocket(uri: Uri): Socket =
     var socket: Socket
     if uri.scheme == "unix":
-        socket = initUnixSocket(uri) 
+        socket =  initUnixSocket(uri) 
+    if uri.scheme == "http":
+        var port = Port(80)
+        if uri.port != "":
+            port = Port(uri.port.parseInt())
+        socket =  net.dial(uri.hostname, port)
+    if uri.scheme == "https":
+        var port = Port(443)
+        if uri.port != "":
+            port = Port(uri.port.parseInt())
+        socket =  net.dial(uri.hostname, port) 
     return socket
 
 proc initAsyncSocket(uri: Uri): Future[AsyncSocket] {.async.} =
     var socket: AsyncSocket
     if uri.scheme == "unix":
         socket = await initAsyncUnixSocket(uri) 
+    if uri.scheme == "http":
+        var port = Port(80)
+        if uri.port != "":
+            port = Port(uri.port.parseInt())
+        socket = await asyncnet.dial(uri.hostname, port)
+    if uri.scheme == "https":
+        var port = Port(443)
+        if uri.port != "":
+            port = Port(uri.port.parseInt())
+        socket = await asyncnet.dial(uri.hostname, port) 
     return socket
 
 proc initClient(basepath: string, headers: HttpHeaders = nil): HttpClient =
@@ -275,6 +310,40 @@ proc initAsyncClient(basepath: string, headers: HttpHeaders = nil): Future[Async
     client.responseHeaders = newHttpHeaders()
     return client
 
+# TODO: requests
+# TODO: MultiPart Requests
+proc request(client: AsyncHttpClient, httpMethod: HttpMethod = HttpGet, uri: Uri | string): Future[HttpHeaders] {.async.} =
+    var tempUri: Uri
+    when uri is string:
+        tempUri = uri.parseUri()
+    when uri is Uri:
+        tempUri = uri
+    
+    var path = tempUri.hostname  & tempUri.path 
+
+    if tempUri.scheme == "unix":
+        path = tempUri.uriGetUnixSocketPath()[1]
+    
+    await client.sendGreeting(httpMethod, path)
+    await client.sendHeaders()
+    return await client.getHeaderResponse()
+
+proc request(client: var HttpClient,  httpMethod: HttpMethod = HttpGet, uri: Uri | string): HttpHeaders =
+    var tempUri: Uri
+    when uri is string:
+        tempUri = uri.parseUri()
+    when uri is Uri:
+        tempUri = uri
+    
+    var path = tempUri.hostname  & tempUri.path 
+
+    if tempUri.scheme == "unix":
+        path = tempUri.uriGetUnixSocketPath()[1]
+    
+    client.sendGreeting(httpMethod, path)
+    client.sendHeaders()
+    return client.getHeaderResponse()
+
 
 let basepath = "unix:///var/run/docker.sock"
 let headers = newHttpHeaders({
@@ -288,10 +357,7 @@ let headers = newHttpHeaders({
 
 proc main() =
     var client = initClient(basepath, headers)
-    client.sendGreeting(HttpMethod.HttpGet, "/containers/myContainer/stats")
-    # client.sendGreeting(HttpMethod.HttpGet, "/containers/json")
-    client.sendHeaders()
-    client.responseHeaders = client.getHeaderResponse()
+    client.responseHeaders = client.request(HttpMethod.HttpGet, "/containers/myContainer/stats")
 
     # get the body response
     for i in 0..3:
@@ -303,10 +369,7 @@ proc main() =
 
 proc mainAsync() {.async.} =
     var client = await initAsyncClient(basepath, headers)
-    await client.sendGreeting(HttpMethod.HttpGet, "/containers/myContainer/stats")
-    # client.sendGreeting(HttpMethod.HttpGet, "/containers/json")
-    await client.sendHeaders()
-    client.responseHeaders = await client.getHeaderResponse()
+    client.responseHeaders = await client.request(HttpMethod.HttpGet, "/containers/myContainer/stats")
     
 
     # get the body response
@@ -319,6 +382,5 @@ proc mainAsync() {.async.} =
 
 
 when isMainModule:
-    echo parseUri(basepath & "/containers/container").toJson()   
-    # main()
-    # waitFor mainAsync()
+    main()
+    waitFor mainAsync()
