@@ -5,8 +5,10 @@ import httpcore
 import strutils
 import uri
 import jsony
-import algorithm
-
+import strformat
+import ./openapiclient/models/model_container_stats
+import ./openapiclient/apis/api_utils
+import tables
 # > GET /containers/myContainer/stats HTTP/1.1
 # > Host: localhost
 # > User-Agent: curl/7.79.1
@@ -27,14 +29,21 @@ type
         headers*: HttpHeaders
         responseHeaders*: HttpHeaders
         body*: string
-    AsyncHttpClient = object
+    AsyncHttpClient* = object
         socket*: AsyncSocket
         headers*: HttpHeaders
         responseHeaders*: HttpHeaders
         body*: string
     
     HttpError* = object of Exception
-    
+
+    Docker = object
+        client: HttpClient
+        basepath: string
+    AsyncDocker = object
+        client: AsyncHttpClient
+        basepath: string
+
 
 proc sendGreeting*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod, uri: string): Future[void] {.multisync.} =
     let message = $httpMethod & " " & uri & " HTTP/1.1" & "\r\n"
@@ -329,7 +338,7 @@ proc request*(client: AsyncHttpClient, httpMethod: HttpMethod = HttpGet, uri: Ur
     await client.sendHeaders()
     return await client.getHeaderResponse()
 
-proc request*(client: var HttpClient,  httpMethod: HttpMethod = HttpGet, uri: Uri | string): HttpHeaders =
+proc request*(client: HttpClient,  httpMethod: HttpMethod = HttpGet, uri: Uri | string): HttpHeaders =
     var tempUri: Uri
     when uri is string:
         tempUri = uri.parseUri()
@@ -380,8 +389,23 @@ proc mainAsync() {.async.} =
             break
         echo "< " & data
 
+iterator containerStats*(docker: var Docker, id: string, stream: bool, oneShot: bool): ContainerStats =
+    ## Get container stats based on resource usage
+    let query_for_api_call = encodeQuery([
+        ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect. 
+        ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`. 
+    ])
+    docker.client.responseHeaders = docker.client.request(HttpMethod.HttpGet, docker.basepath & fmt"/containers/{id}/stats" & "?" & query_for_api_call)
+    for data in docker.client.getData():
+        yield data.fromJson(ContainerStats)
+
 
 
 when isMainModule:
-    main()
-    waitFor mainAsync()
+    # main()
+    # waitFor mainAsync()
+    var docker: Docker
+    docker.basepath = "unix:///var/run/docker.sock"
+    docker.client = initClient(docker.basepath, headers)
+    for stats in docker.containerStats("myContainer", true, false):
+        echo stats

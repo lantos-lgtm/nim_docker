@@ -43,7 +43,7 @@ proc mainAsync() {.async.} =
 proc main() = 
     echo "running main"
     var docker: Docker
-    docker.client = newHttpClient()
+    docker.client = initClient()
     docker.basepath = "unix:///var/run/docker.sock/v1.41"
     docker.client.headers = newHttpHeaders({
         "User-Agent": "nimDocker",

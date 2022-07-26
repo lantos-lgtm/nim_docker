@@ -10,7 +10,6 @@ import streams
 import asyncstreams
 import asyncdispatch
 
-
 type
   Docker* = object
     client*: HttpClient
