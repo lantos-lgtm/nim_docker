@@ -22,27 +22,27 @@ import algorithm
 # < Transfer-Encoding: chunked
 
 type
-    HttpClient = object
-        socket: Socket
-        headers: HttpHeaders
-        responseHeaders: HttpHeaders
-        body: string
+    HttpClient* = object
+        socket*: Socket
+        headers*: HttpHeaders
+        responseHeaders*: HttpHeaders
+        body*: string
     AsyncHttpClient = object
-        socket: AsyncSocket
-        headers: HttpHeaders
-        responseHeaders: HttpHeaders
-        body: string
+        socket*: AsyncSocket
+        headers*: HttpHeaders
+        responseHeaders*: HttpHeaders
+        body*: string
     
-    HttpError = object of Exception
+    HttpError* = object of Exception
     
 
-proc sendGreeting(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod, uri: string): Future[void] {.multisync.} =
+proc sendGreeting*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod, uri: string): Future[void] {.multisync.} =
     let message = $httpMethod & " " & uri & " HTTP/1.1" & "\r\n"
     when not defined(release):
         echo  "> " & message
     await client.socket.send(message)
 
-proc sendHeaders(client: HttpClient | AsyncHttpClient, headers: HttpHeaders = nil ): Future[void] {.multisync.} =
+proc sendHeaders*(client: HttpClient | AsyncHttpClient, headers: HttpHeaders = nil ): Future[void] {.multisync.} =
     ## Will send the headers param first otherwise default to the client's headers
     var tempHeaders = newHttpHeaders()
 
@@ -60,7 +60,7 @@ proc sendHeaders(client: HttpClient | AsyncHttpClient, headers: HttpHeaders = ni
     await client.socket.send("\r\n")
 
 
-proc getChunks(client: HttpClient | AsyncHttpClient, size: int): Future[string] {.multisync.} =
+proc getChunks*(client: HttpClient | AsyncHttpClient, size: int): Future[string] {.multisync.} =
     var data = ""
     while data.len() < size:
         let chunk = await client.socket.recvLine()
@@ -72,7 +72,7 @@ proc getChunks(client: HttpClient | AsyncHttpClient, size: int): Future[string] 
     return data
     
 
-proc getData(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.} =
+proc getData*(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.} =
     ## Get the data from the socket
     ## TODO: Handle gzip &  encoding 
     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
@@ -113,7 +113,7 @@ proc getData(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.}
 
     return data
 
-proc getDataFull(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.} =
+proc getDataFull*(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.} =
     var temp = "" 
     while true:
         var data = ""
@@ -127,26 +127,27 @@ proc getDataFull(client: HttpClient | AsyncHttpClient): Future[string] {.multisy
     return temp
 
 
-iterator getData(client: HttpClient): string =
+iterator getData*(client: HttpClient): string =
     while true:
         let data = client.getData() 
         if data == "":
             break
         yield data 
 
-iterator getData(client: AsyncHttpClient): string =
+iterator getData*(client: AsyncHttpClient): string =
     while true:
         let data = waitFor client.getData() 
         if data == "":
             break
         yield data
 
-proc parseHeaderTupple(val: string): (string, string) =
+proc parseHeaderTupple*(val: string): (string, string) =
     let parts = val.split(": ")
     if parts.len != 2:
         raise newException(HttpError, "Invalid header: " & val)
     return (parts[0].strip(), parts[1].strip())
-proc add(headers:var HttpHeaders, val: string) =
+
+proc add*(headers:var HttpHeaders, val: string) =
     ## add the header to the headers 
     ## Throws error when headers > 10_000
     let header = parseHeaderTupple(val)
@@ -154,7 +155,7 @@ proc add(headers:var HttpHeaders, val: string) =
         raise newException(HttpError, "Too many headers")
     headers.add(header[0], header[1])
 
-proc parseHttpVersion(val: string): HttpVersion =
+proc parseHttpVersion*(val: string): HttpVersion =
     ## We only support http/1.1
     ## TODO: Support http/2.0 
     case val:
@@ -168,7 +169,7 @@ proc parseHttpVersion(val: string): HttpVersion =
     else:
         raise newException(HttpError, "Invalid HTTP version: " & val)
 
-proc parseWelcomeMessage(val: string): (HttpVersion, HttpCode) =
+proc parseWelcomeMessage*(val: string): (HttpVersion, HttpCode) =
     let 
         parts = val.split(" ")
         version = parts[0].parseHttpVersion()
@@ -180,7 +181,7 @@ proc parseWelcomeMessage(val: string): (HttpVersion, HttpCode) =
         raise newException(HttpError, "Invalid welcome message: " & val)
     return (version, status)
 
-proc getHeaderResponse(client: HttpClient | AsyncHttpClient): Future[HttpHeaders] {.multisync.} =
+proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[HttpHeaders] {.multisync.} =
     var headers = newHttpHeaders()
     ## parse GET location PROTOCOL
     ## example 
@@ -214,7 +215,7 @@ proc finds(val: string, find: string): seq[int]=
         if val[i..i + find.len - 1] == find:
             result.add(i)
 
-proc uriGetUnixSocketPath(uri: Uri): (string, string) =
+proc uriGetUnixSocketPath*(uri: Uri): (string, string) =
     let conPath = uri.path
     # let dotPos =  conPath.find("/", conPath.find("."), conPath.len())
     let dotPoses =  conPath.finds(".")
@@ -286,7 +287,7 @@ proc initAsyncSocket(uri: Uri): Future[AsyncSocket] {.async.} =
         socket = await asyncnet.dial(uri.hostname, port) 
     return socket
 
-proc initClient(basepath: string, headers: HttpHeaders = nil): HttpClient =
+proc initClient*(basepath: string, headers: HttpHeaders = nil): HttpClient =
     var socket = initSocket(basepath.parseUri())
     var client: HttpClient
     client.socket = socket
@@ -312,7 +313,7 @@ proc initAsyncClient(basepath: string, headers: HttpHeaders = nil): Future[Async
 
 # TODO: requests
 # TODO: MultiPart Requests
-proc request(client: AsyncHttpClient, httpMethod: HttpMethod = HttpGet, uri: Uri | string): Future[HttpHeaders] {.async.} =
+proc request*(client: AsyncHttpClient, httpMethod: HttpMethod = HttpGet, uri: Uri | string): Future[HttpHeaders] {.async.} =
     var tempUri: Uri
     when uri is string:
         tempUri = uri.parseUri()
@@ -328,7 +329,7 @@ proc request(client: AsyncHttpClient, httpMethod: HttpMethod = HttpGet, uri: Uri
     await client.sendHeaders()
     return await client.getHeaderResponse()
 
-proc request(client: var HttpClient,  httpMethod: HttpMethod = HttpGet, uri: Uri | string): HttpHeaders =
+proc request*(client: var HttpClient,  httpMethod: HttpMethod = HttpGet, uri: Uri | string): HttpHeaders =
     var tempUri: Uri
     when uri is string:
         tempUri = uri.parseUri()
