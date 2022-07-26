@@ -33,8 +33,11 @@ proc constructResult1*[T](response: Response | AsyncResponse): Future[T] {.multi
   of{Http200, Http201, Http202, Http204, Http206, Http304}:
     when T is void:
       return
-    elif T is Stream or T is FutureStream[string]:
+    elif T is Stream:
       return response.bodyStream
+    elif T is FutureStream[string]:
+      let bodyStream = response.bodyStream
+      return bodyStream
     elif T is string:
       return await response.body()
     else:

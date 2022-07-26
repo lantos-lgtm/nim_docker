@@ -18,6 +18,7 @@ import tables
 import typetraits
 import uri
 import asyncdispatch
+import streams
 
 import ../models/model_container_change_response_item
 import ../models/model_container_create_response
@@ -30,7 +31,6 @@ import ../models/model_container_update_response
 import ../models/model_container_update_request
 import ../models/model_container_wait_response
 import ../models/model_container_stats
-import asyncdispatch
 
 export tables
 
@@ -209,17 +209,28 @@ proc containerStart*(docker: Docker | AsyncDocker, id: string, detachKeys: strin
   else:
     raise newException(ServerError, response.body())
 
-
-proc containerStats*(docker: Docker | AsyncDocker, id: string, stream: bool, oneShot: bool): Future[ContainerStats] {.multiSync.} =
+proc containerStats*(docker: Docker | AsyncDocker, id: string, stream: bool, oneShot: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Get container stats based on resource usage
   let query_for_api_call = encodeQuery([
     ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect. 
     ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`. 
   ])
+  return await docker.client.get(docker.basepath & fmt"/containers/{id}/stats" & "?" & query_for_api_call)
 
-  let response = await docker.client.get(docker.basepath & fmt"/containers/{id}/stats" & "?" & query_for_api_call)
+
+proc containerStatsOneShot*(docker: Docker | AsyncDocker, id: string): Future[ContainerStats] {.multiSync.} =
+  let response = await docker.containerStats(id, false, true)
   return await constructResult1[ContainerStats](response)
 
+proc containerStatsStream1*(docker: Docker, id: string): Stream =
+  let response = docker.containerStats(id, true, false)
+  # return constructResult1[Stream](response)
+  return response.bodyStream
+
+proc containerStatsStream*(docker: AsyncDocker, id: string): Future[FutureStream[string]] {.async.} =
+  let response = await docker.containerStats(id, true, false)
+  # return await constructResult1[FutureStream[string]](response)
+  return response.bodyStream
 
 proc containerStop*(docker: Docker | AsyncDocker, id: string, t: int): Response =
   ## Stop a container

@@ -11,26 +11,76 @@ import httpclient
 import logging
 import options
 import asyncdispatch
+import streams
 
 import openapiclient
 
 
-let logger = newConsoleLogger()
-addHandler(logger)
+proc mainAsync() {.async.} = 
+    echo "running main async"
 
+    var docker: AsyncDocker
+    docker.client = newAsyncHttpClient()
+    docker.basepath = "unix:///var/run/docker.sock/v1.41"
+    docker.client.headers = newHttpHeaders({
+        "User-Agent": "nimDocker",
+        "Host": "v1.41",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    })
 
-var docker: AsyncDocker
-docker.client = newAsyncHttpClient()
-docker.basepath = "unix:///var/run/docker.sock/v1.41"
-docker.client.headers = newHttpHeaders({
-    "User-Agent": "nimDocker",
-    "Host": "v1.41",
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-})
-
-proc main() {.async.} = 
     let containers =  await docker.containerList()
     echo containers
+    echo await docker.containerStatsOneShot("myContainer")
+    let stream = await docker.containerStatsStream("myContainer")
+    for _ in 0..3:
+        let (hasData, data) = await stream.read()
+        if not hasData:
+            break
+        echo data
 
-waitFor main()
+        
+proc main() = 
+    echo "running main"
+    var docker: Docker
+    docker.client = newHttpClient()
+    docker.basepath = "unix:///var/run/docker.sock/v1.41"
+    docker.client.headers = newHttpHeaders({
+        "User-Agent": "nimDocker",
+        "Host": "v1.41",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    })
+
+    let containers = docker.containerList()
+    echo containers
+    echo docker.containerStatsOneShot("myContainer")
+    
+    # var res = docker.client.get("unix:///var/run/docker.sock/v1.41/containers/myContainer/stats?stream=true")
+    var stream = newStringStream()
+    
+    var res = docker.client.request("unix:///var/run/docker.sock/v1.41/containers/myContainer/stats?stream=true")
+    echo "HANGS"
+    
+
+    # var stream = docker.containerStatsStream1("myContainer")
+    var data: string 
+
+    while streams.readLine(res.bodyStream, data):
+        echo data
+    # let data = docker.containerStatsStream1("myContainer").readLine()
+    # echo data
+
+    # for _ in 0..3:
+    #     let data = stream.readLine()
+    #     if not hasData:
+    #         break
+    #     echo data
+        
+
+waitFor mainAsync()
+# main()
+
+
+
+

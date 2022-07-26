@@ -3,7 +3,8 @@ import asyncnet
 import net
 import httpcore
 import strutils
-import options
+import uri
+import jsony
 
 # > GET /containers/myContainer/stats HTTP/1.1
 # > Host: localhost
@@ -57,31 +58,58 @@ proc sendHeaders(client: HttpClient | AsyncHttpClient, headers: HttpHeaders = ni
     # finish sending the headers
     await client.socket.send("\r\n")
 
+
+proc getChunks(client: HttpClient | AsyncHttpClient, size: int): Future[string] {.multisync.} =
+    var data = ""
+    while data.len() < size:
+        let chunk = await client.socket.recvLine()
+        data.add(chunk)
+    # TODO: FIX THIS data.len should be size but it's not becuase of the \r\n
+    if data.len() - 1 != size and size != -1:
+        echo cast[seq[char]](data)
+        raise newException(HttpError, "Chunk size mismatch expected:" & $size & " but got data.len():" & $data.len & "\n data:" & $data)
+    return data
+    
+
 proc getData(client: HttpClient | AsyncHttpClient): Future[string] {.multisync.} =
+    ## Get the data from the socket
+    ## TODO: Handle gzip &  encoding 
+    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
+    # Transfer-Encoding: chunked
+    # Transfer-Encoding: compress
+    # Transfer-Encoding: deflate
+    # Transfer-Encoding: gzip
+    # // Several values can be listed, separated by a comma
+    # Transfer-Encoding: gzip, chunked
     # response types
     # 1. chunked -> data == \r\n ? read next line as content length, then read that many bytes else chunkSize == 0 end : return the data
     # 2. content length -> read the content length and read the content 
     # 3. no content -> return empty string
 
+    # example Chunked
+    # < xA
+    # this is size 10
+    # < \r\n
+    # < 0123456789
+    # this is size 10
+    # < \r\n
+    # < 0
+    # ENDED 
     var 
         chunkSize = -1
         data = ""
-    
     if client.responseHeaders.getOrDefault("Transfer-Encoding").contains("chunked"):
         var chunkSizeData = (await client.socket.recvLine())
-        if chunkSizeData == "\r\n":
-            chunkSizeData = (await client.socket.recvLine())
         try:
             chunkSize = fromHex[int](chunkSizeData)
         except ValueError:
-            raise newException(HttpError, "Invalid chunk size: " & chunkSizeData)
-
+            raise newException(HttpError, "Invalid chunk size value:" & chunkSizeData)
         if chunkSize == 0:
             return data
+        return await client.getChunks(chunkSize)
 
     data = await client.socket.recvLine()
-    if data.len() + 1 != chunkSize and chunkSize != -1:
-        raise newException(HttpError, "Chunk size mismatch")
+
 
     return data
 
@@ -118,14 +146,17 @@ proc parseHeaderTupple(val: string): (string, string) =
     if parts.len != 2:
         raise newException(HttpError, "Invalid header: " & val)
     return (parts[0].strip(), parts[1].strip())
-
 proc add(headers:var HttpHeaders, val: string) =
+    ## add the header to the headers 
+    ## Throws error when headers > 10_000
     let header = parseHeaderTupple(val)
     if headers.len > headerLimit:
         raise newException(HttpError, "Too many headers")
     headers.add(header[0], header[1])
 
 proc parseHttpVersion(val: string): HttpVersion =
+    ## We only support http/1.1
+    ## TODO: Support http/2.0 
     case val:
     of "HTTP/1.0":
         # return HttpVer10
@@ -174,6 +205,77 @@ proc getHeaderResponse(client: HttpClient | AsyncHttpClient): Future[HttpHeaders
 
     return headers
 
+proc uriGetUnixSocketPath(uri: Uri): (string, string) =
+    let conPath = uri.path
+    let dotPos =  conPath.find("/", conPath.find("."), conPath.len())
+    let socketPath = conPath[0..dotPos-1]
+    let urlPath = conPath[dotPos..conPath.high]
+    return (socketPath, urlPath)
+
+proc initUnixSocket(uri: Uri | string): Socket =
+    var tempUri: Uri
+    when uri is string:
+        tempUri = uri.parseUri()
+    when uri is Uri:
+        tempUri = uri
+    result = newSocket(
+        Domain.AF_UNIX,
+        SockType.SOCK_STREAM,
+        Protocol.IPPROTO_IP
+    )
+    result.connectUnix(tempUri.uriGetUnixSocketPath()[0])
+
+proc initAsyncUnixSocket(uri: Uri | string): Future[AsyncSocket] {.async.} =
+    var tempUri: Uri
+    when uri is string:
+        tempUri = uri.parseUri()
+    when uri is Uri:
+        tempUri = uri
+    result = newAsyncSocket(
+        Domain.AF_UNIX,
+        SockType.SOCK_STREAM,
+        Protocol.IPPROTO_IP
+    )
+    await result.connectUnix(tempUri.uriGetUnixSocketPath()[0])
+
+
+proc initSocket(uri: Uri): Socket =
+    var socket: Socket
+    if uri.scheme == "unix":
+        socket = initUnixSocket(uri) 
+    return socket
+
+proc initAsyncSocket(uri: Uri): Future[AsyncSocket] {.async.} =
+    var socket: AsyncSocket
+    if uri.scheme == "unix":
+        socket = await initAsyncUnixSocket(uri) 
+    return socket
+
+proc initClient(basepath: string, headers: HttpHeaders = nil): HttpClient =
+    var socket = initSocket(basepath.parseUri())
+    var client: HttpClient
+    client.socket = socket
+    if headers.isNil:
+        client.headers = newHttpHeaders()
+    else:
+        client.headers = headers
+
+    client.responseHeaders = newHttpHeaders()
+    return client
+
+proc initAsyncClient(basepath: string, headers: HttpHeaders = nil): Future[AsyncHttpClient] {.async.}=
+    var socket = await initAsyncSocket(basepath.parseUri())
+    var client: AsyncHttpClient
+    client.socket = socket
+    if headers.isNil:
+        client.headers = newHttpHeaders()
+    else:
+        client.headers = headers
+
+    client.responseHeaders = newHttpHeaders()
+    return client
+
+
 let basepath = "unix:///var/run/docker.sock"
 let headers = newHttpHeaders({
     "Host": "v1.41",
@@ -184,56 +286,39 @@ let headers = newHttpHeaders({
     # "Content-Length": "0"
 })
 
-
 proc main() =
-    let socket = newSocket(
-        Domain.AF_UNIX,
-        SockType.SOCK_STREAM,
-        Protocol.IPPROTO_IP
-    )
-    var client: HttpClient
-    client.socket = socket
-    client.headers = headers
-    client.responseHeaders = newHttpHeaders()
-    client.socket.connectUnix(basepath[7..basepath.high])
-
+    var client = initClient(basepath, headers)
     client.sendGreeting(HttpMethod.HttpGet, "/containers/myContainer/stats")
     # client.sendGreeting(HttpMethod.HttpGet, "/containers/json")
     client.sendHeaders()
-
-    let responseHeaders = client.getHeaderResponse()
-    client.responseHeaders = responseHeaders
-    
+    client.responseHeaders = client.getHeaderResponse()
 
     # get the body response
-    for data in client.getData():
+    for i in 0..3:
+        let data = client.getData()
         if data == "\r\n":
             break
         echo "< " & data
 
 
 proc mainAsync() {.async.} =
-    let socket = newAsyncSocket(
-        Domain.AF_UNIX,
-        SockType.SOCK_STREAM,
-        Protocol.IPPROTO_IP
-    )
-    var client:  AsyncHttpClient
-    client.socket = socket
-    client.headers = headers
-    await client.socket.connectUnix(basepath[7..basepath.high])
-    # await client.sendGreeting(HttpMethod.HttpGet, "/containers/myContainer/stats")
-    await client.sendGreeting(HttpMethod.HttpGet, "/containers/json")
+    var client = await initAsyncClient(basepath, headers)
+    await client.sendGreeting(HttpMethod.HttpGet, "/containers/myContainer/stats")
+    # client.sendGreeting(HttpMethod.HttpGet, "/containers/json")
     await client.sendHeaders()
-
-    echo await client.getHeaderResponse()
+    client.responseHeaders = await client.getHeaderResponse()
+    
 
     # get the body response
-    # for data in socket.getData():
-        # if data == "\r\n":
-        #     break
-        # echo "< " & data
+    for i in 0..3:
+        let data = await client.getData()
+        if data == "\r\n":
+            break
+        echo "< " & data
+
+
 
 when isMainModule:
-    main()
+    echo parseUri(basepath & "/containers/container").toJson()   
+    # main()
     # waitFor mainAsync()
