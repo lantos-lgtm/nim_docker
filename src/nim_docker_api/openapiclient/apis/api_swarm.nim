@@ -42,26 +42,26 @@ proc swarmInspect*(docker: Docker | AsyncDocker): Future[Swarm] {.multiSync.} =
   return await constructResult1[Swarm](response)
 
 
-proc swarmJoin*(docker: Docker | AsyncDocker, body: SwarmJoinRequest): Response =
+proc swarmJoin*(docker: Docker | AsyncDocker, body: SwarmJoinRequest): Future[Response | AsyncResponse] {.multiSync.} =
   ## Join an existing swarm
   docker.client.headers["Content-Type"] = "application/json"
   # httpClient.post(docker.basepath & "/swarm/join", $(%body))
-  await docker.client.post(docker.basepath & "/swarm/join", body.toJson())
+  return await docker.client.post(docker.basepath & "/swarm/join", body.toJson())
 
 
-proc swarmLeave*(docker: Docker | AsyncDocker, force: bool): Response =
+proc swarmLeave*(docker: Docker | AsyncDocker, force: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Leave a swarm
   let query_for_api_call = encodeQuery([
     ("force", $force), # Force leave swarm, even if this is the last manager or that it will break the cluster. 
   ])
-  await docker.client.post(docker.basepath & "/swarm/leave" & "?" & query_for_api_call)
+  return await docker.client.post(docker.basepath & "/swarm/leave" & "?" & query_for_api_call)
 
 
-proc swarmUnlock*(docker: Docker | AsyncDocker, body: SwarmUnlockRequest): Response =
+proc swarmUnlock*(docker: Docker | AsyncDocker, body: SwarmUnlockRequest): Future[Response | AsyncResponse] {.multiSync.} =
   ## Unlock a locked manager
   docker.client.headers["Content-Type"] = "application/json"
   # httpClient.post(docker.basepath & "/swarm/unlock", $(%body))
-  await docker.client.post(docker.basepath & "/swarm/unlock", body.toJson())
+  return await docker.client.post(docker.basepath & "/swarm/unlock", body.toJson())
 
 
 proc swarmUnlockkey*(docker: Docker | AsyncDocker): Future[UnlockKeyResponse] {.multiSync.} =
@@ -71,7 +71,7 @@ proc swarmUnlockkey*(docker: Docker | AsyncDocker): Future[UnlockKeyResponse] {.
   return await constructResult1[UnlockKeyResponse](response)
 
 
-proc swarmUpdate*(docker: Docker | AsyncDocker, version: int64, body: SwarmSpec, rotateWorkerToken: bool, rotateManagerToken: bool, rotateManagerUnlockKey: bool): Response =
+proc swarmUpdate*(docker: Docker | AsyncDocker, version: int64, body: SwarmSpec, rotateWorkerToken: bool, rotateManagerToken: bool, rotateManagerUnlockKey: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a swarm
   docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
@@ -81,5 +81,5 @@ proc swarmUpdate*(docker: Docker | AsyncDocker, version: int64, body: SwarmSpec,
     ("rotateManagerUnlockKey", $rotateManagerUnlockKey), # Rotate the manager unlock key.
   ])
   # httpClient.post(docker.basepath & "/swarm/update" & "?" & query_for_api_call, $(%body))
-  await docker.client.post(docker.basepath & "/swarm/update" & "?" & query_for_api_call, body.toJson())
+  return await docker.client.post(docker.basepath & "/swarm/update" & "?" & query_for_api_call, body.toJson())
 

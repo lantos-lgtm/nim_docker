@@ -1026,6 +1026,7 @@ proc requestAux(client: HttpClient | AsyncHttpClient; url: Uri;
       tempUrl.path =  urlPath
 
   when client is AsyncHttpClient:
+
     if not client.parseBodyFut.isNil:
       # let the current operation finish before making another request
       await client.parseBodyFut
@@ -1033,7 +1034,6 @@ proc requestAux(client: HttpClient | AsyncHttpClient; url: Uri;
 
   await newConnection(client, tempUrl)
   var newHeaders: HttpHeaders
-
   var data: seq[string]
   if multipart != nil and multipart.content.len > 0:
     # `format` modifies `client.headers`, see
@@ -1048,7 +1048,6 @@ proc requestAux(client: HttpClient | AsyncHttpClient; url: Uri;
         newHeaders["Content-Length"] = $body.len
       elif httpMethod notin {HttpGet, HttpHead}:
         newHeaders["Content-Length"] = "0"
-
   if not newHeaders.hasKey("user-agent") and client.userAgent.len > 0:
     newHeaders["User-Agent"] = client.userAgent
   let headerString = generateHeaders(tempUrl, httpMethod, newHeaders,

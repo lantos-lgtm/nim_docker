@@ -13,7 +13,6 @@ import api_utils
 import options
 import strformat
 import strutils
-import tables
 import typetraits
 import uri
 import asyncdispatch
@@ -33,12 +32,12 @@ proc volumeCreate*(docker: Docker | AsyncDocker, volumeConfig: VolumeCreateOptio
   return await constructResult1[Volume](response)
 
 
-proc volumeDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Response =
+proc volumeDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Remove a volume
   let query_for_api_call = encodeQuery([
     ("force", $force), # Force the removal of the volume
   ])
-  await docker.client.delete(docker.basepath & fmt"/volumes/{name}" & "?" & query_for_api_call)
+  return await docker.client.delete(docker.basepath & fmt"/volumes/{name}" & "?" & query_for_api_call)
 
 
 proc volumeInspect*(docker: Docker | AsyncDocker, name: string): Future[Volume] {.multiSync.} =

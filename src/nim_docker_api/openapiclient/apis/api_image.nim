@@ -13,7 +13,6 @@ import api_utils
 import options
 import strformat
 import strutils
-import tables
 import typetraits
 import uri
 
@@ -42,7 +41,7 @@ proc buildPrune*(docker: Docker | AsyncDocker, keepStorage: int64, all: bool, fi
   return await constructResult1[BuildPruneResponse](response)
 
 
-proc imageBuild*(docker: Docker | AsyncDocker, dockerfile: string, t: string, extrahosts: string, remote: string, q: bool, nocache: bool, cachefrom: string, pull: string, rm: bool, forcerm: bool, memory: int, memswap: int, cpushares: int, cpusetcpus: string, cpuperiod: int, cpuquota: int, buildargs: string, shmsize: int, squash: bool, labels: string, networkmode: string, contentType: string, xRegistryConfig: string, platform: string, target: string, outputs: string, inputStream: string): Response =
+proc imageBuild*(docker: Docker | AsyncDocker, dockerfile: string, t: string, extrahosts: string, remote: string, q: bool, nocache: bool, cachefrom: string, pull: string, rm: bool, forcerm: bool, memory: int, memswap: int, cpushares: int, cpusetcpus: string, cpuperiod: int, cpuquota: int, buildargs: string, shmsize: int, squash: bool, labels: string, networkmode: string, contentType: string, xRegistryConfig: string, platform: string, target: string, outputs: string, inputStream: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Build an image
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["Content-type"] = contentType
@@ -73,7 +72,7 @@ proc imageBuild*(docker: Docker | AsyncDocker, dockerfile: string, t: string, ex
     ("target", $target), # Target build stage
     ("outputs", $outputs), # BuildKit output configuration
   ])
-  await docker.client.post(docker.basepath & "/build" & "?" & query_for_api_call, $(%inputStream))
+  return await docker.client.post(docker.basepath & "/build" & "?" & query_for_api_call, $(%inputStream))
 
 
 proc imageCommit*(docker: Docker | AsyncDocker, container: string, repo: string, tag: string, comment: string, author: string, pause: bool, changes: string, containerConfig: ContainerConfig): Future[IdResponse] {.multiSync.} =
@@ -93,7 +92,7 @@ proc imageCommit*(docker: Docker | AsyncDocker, container: string, repo: string,
   return await constructResult1[IdResponse](response)
 
 
-proc imageCreate*(docker: Docker | AsyncDocker, fromImage: string, fromSrc: string, repo: string, tag: string, message: string, xRegistryAuth: string, changes: seq[string], platform: string, inputImage: string): Response =
+proc imageCreate*(docker: Docker | AsyncDocker, fromImage: string, fromSrc: string, repo: string, tag: string, message: string, xRegistryAuth: string, changes: seq[string], platform: string, inputImage: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Create an image
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
@@ -106,7 +105,7 @@ proc imageCreate*(docker: Docker | AsyncDocker, fromImage: string, fromSrc: stri
     ("changes", $changes.join(",")), # Apply `Dockerfile` instructions to the image that is created, for example: `changes=ENV DEBUG=true`. Note that `ENV DEBUG=true` should be URI component encoded.  Supported `Dockerfile` instructions: `CMD`|`ENTRYPOINT`|`ENV`|`EXPOSE`|`ONBUILD`|`USER`|`VOLUME`|`WORKDIR` 
     ("platform", $platform), # Platform in the format os[/arch[/variant]]
   ])
-  await docker.client.post(docker.basepath & "/images/create" & "?" & query_for_api_call, $(%inputImage))
+  return await docker.client.post(docker.basepath & "/images/create" & "?" & query_for_api_call, $(%inputImage))
 
 
 proc imageDelete*(docker: Docker | AsyncDocker, name: string, force: bool, noprune: bool): Future[seq[ImageDeleteResponseItem]] {.multiSync.} =
@@ -163,13 +162,13 @@ proc imageList*(docker: Docker | AsyncDocker, all: bool, filters: string, digest
   return await constructResult1[seq[ImageSummary]](response)
 
 
-proc imageLoad*(docker: Docker | AsyncDocker, quiet: bool, imagesTarball: string): Response =
+proc imageLoad*(docker: Docker | AsyncDocker, quiet: bool, imagesTarball: string): Future[Response | AsyncResponse] {.multiSync.} =
   # images
   docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
     ("quiet", $quiet), # Suppress progress details during load.
   ])
-  await docker.client.post(docker.basepath & "/images/load" & "?" & query_for_api_call, $(%imagesTarball))
+  return await docker.client.post(docker.basepath & "/images/load" & "?" & query_for_api_call, $(%imagesTarball))
 
 
 proc imagePrune*(docker: Docker | AsyncDocker, filters: string): Future[ImagePruneResponse] {.multiSync.} =
@@ -182,13 +181,13 @@ proc imagePrune*(docker: Docker | AsyncDocker, filters: string): Future[ImagePru
   return await constructResult1[ImagePruneResponse](response)
 
 
-proc imagePush*(docker: Docker | AsyncDocker, name: string, xRegistryAuth: string, tag: string): Response =
+proc imagePush*(docker: Docker | AsyncDocker, name: string, xRegistryAuth: string, tag: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Push an image
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
   let query_for_api_call = encodeQuery([
     ("tag", $tag), # The tag to associate with the image on the registry.
   ])
-  await docker.client.post(docker.basepath & fmt"/images/{name}/push" & "?" & query_for_api_call)
+  return await docker.client.post(docker.basepath & fmt"/images/{name}/push" & "?" & query_for_api_call)
 
 
 proc imageSearch*(docker: Docker | AsyncDocker, term: string, limit: int, filters: string): Future[seq[ImageSearchResponseItem]] {.multiSync.} =
@@ -203,11 +202,11 @@ proc imageSearch*(docker: Docker | AsyncDocker, term: string, limit: int, filter
   return await constructResult1[seq[ImageSearchResponseItem]](response)
 
 
-proc imageTag*(docker: Docker | AsyncDocker, name: string, repo: string, tag: string): Response =
+proc imageTag*(docker: Docker | AsyncDocker, name: string, repo: string, tag: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Tag an image
   let query_for_api_call = encodeQuery([
     ("repo", $repo), # The repository to tag in. For example, `someuser/someimage`.
     ("tag", $tag), # The name of the new tag.
   ])
-  await docker.client.post(docker.basepath & fmt"/images/{name}/tag" & "?" & query_for_api_call)
+  return await docker.client.post(docker.basepath & fmt"/images/{name}/tag" & "?" & query_for_api_call)
 

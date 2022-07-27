@@ -14,7 +14,6 @@ import api_utils
 import options
 import strformat
 import strutils
-import tables
 import typetraits
 import uri
 
@@ -34,9 +33,9 @@ proc secretCreate*(docker: Docker | AsyncDocker, body: SecretCreateRequest): Fut
   return await constructResult1[IdResponse](response)
 
 
-proc secretDelete*(docker: Docker | AsyncDocker, id: string): Response =
+proc secretDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a secret
-  await docker.client.delete(docker.basepath & fmt"/secrets/{id}")
+  return await docker.client.delete(docker.basepath & fmt"/secrets/{id}")
 
 
 proc secretInspect*(docker: Docker | AsyncDocker, id: string): Future[Secret] {.multiSync.} =
@@ -56,11 +55,11 @@ proc secretList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Secr
   return await constructResult1[seq[Secret]](response)
 
 
-proc secretUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: SecretSpec): Response =
+proc secretUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: SecretSpec): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a Secret
   docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the secret object being updated. This is required to avoid conflicting writes. 
   ])
-  await docker.client.post(docker.basepath & fmt"/secrets/{id}/update" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/secrets/{id}/update" & "?" & query_for_api_call, $(%body))
 

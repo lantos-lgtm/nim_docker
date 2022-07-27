@@ -9,6 +9,7 @@ import tables
 import streams
 import asyncstreams
 import asyncdispatch
+import net
 
 type
   Docker* = object
@@ -25,6 +26,26 @@ type
   Conflict* = object of DockerError
   NotModified* = object of DockerError
   ServerError* = object of DockerError
+
+
+let headers = newHttpHeaders({
+  "Host": "v1.41",
+  "User-Agent": "nim-Docker-Client",
+  "Content-Type": "application/json",
+  "Accept": "application/json"
+})
+
+proc initDocker*(basepath: string = "unix:///var/run/docker.sock"): Docker =
+  result.client = newHttpClient()
+  result.client.headers = headers
+  result.basepath = basepath
+
+
+
+proc initAsyncDocker*(basepath: string = "unix:///var/run/docker.sock"): AsyncDocker =
+  result.client = newAsyncHttpClient()
+  result.client.headers = headers
+  result.basepath = basepath
 
 # something to help with boilerplate
 proc constructResult1*[T](response: Response | AsyncResponse): Future[T] {.multiSync.} =

@@ -33,13 +33,13 @@ proc getPluginPrivileges*(docker: Docker | AsyncDocker, remote: string): Future[
   return await constructResult1[seq[PluginPrivilege]](response)
 
 
-proc pluginCreate*(docker: Docker | AsyncDocker, name: string, tarContext: string): Response =
+proc pluginCreate*(docker: Docker | AsyncDocker, name: string, tarContext: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Create a plugin
   docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
     ("name", $name), # The name of the plugin. The `:latest` tag is optional, and is the default if omitted. 
   ])
-  await docker.client.post(docker.basepath & "/plugins/create" & "?" & query_for_api_call, $(%tarContext))
+  return await docker.client.post(docker.basepath & "/plugins/create" & "?" & query_for_api_call, $(%tarContext))
 
 
 proc pluginDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Future[Plugin] {.multiSync.} =
@@ -52,17 +52,17 @@ proc pluginDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Fut
   return await constructResult1[Plugin](response)
 
 
-proc pluginDisable*(docker: Docker | AsyncDocker, name: string): Response =
+proc pluginDisable*(docker: Docker | AsyncDocker, name: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Disable a plugin
-  await docker.client.post(docker.basepath & fmt"/plugins/{name}/disable")
+  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/disable")
 
 
-proc pluginEnable*(docker: Docker | AsyncDocker, name: string, timeout: int): Response =
+proc pluginEnable*(docker: Docker | AsyncDocker, name: string, timeout: int): Future[Response | AsyncResponse] {.multiSync.} =
   ## Enable a plugin
   let query_for_api_call = encodeQuery([
     ("timeout", $timeout), # Set the HTTP client timeout (in seconds)
   ])
-  await docker.client.post(docker.basepath & fmt"/plugins/{name}/enable" & "?" & query_for_api_call)
+  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/enable" & "?" & query_for_api_call)
 
 
 proc pluginInspect*(docker: Docker | AsyncDocker, name: string): Future[Plugin] {.multiSync.} =
@@ -82,7 +82,7 @@ proc pluginList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Plug
   return await constructResult1[seq[Plugin]](response)
 
 
-proc pluginPull*(docker: Docker | AsyncDocker, remote: string, name: string, xRegistryAuth: string, body: seq[PluginPrivilege]): Response =
+proc pluginPull*(docker: Docker | AsyncDocker, remote: string, name: string, xRegistryAuth: string, body: seq[PluginPrivilege]): Future[Response | AsyncResponse] {.multiSync.} =
   ## Install a plugin
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
@@ -90,26 +90,26 @@ proc pluginPull*(docker: Docker | AsyncDocker, remote: string, name: string, xRe
     ("remote", $remote), # Remote reference for plugin to install.  The `:latest` tag is optional, and is used as the default if omitted. 
     ("name", $name), # Local name for the pulled plugin.  The `:latest` tag is optional, and is used as the default if omitted. 
   ])
-  await docker.client.post(docker.basepath & "/plugins/pull" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & "/plugins/pull" & "?" & query_for_api_call, $(%body))
 
 
-proc pluginPush*(docker: Docker | AsyncDocker, name: string): Response =
+proc pluginPush*(docker: Docker | AsyncDocker, name: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Push a plugin
-  await docker.client.post(docker.basepath & fmt"/plugins/{name}/push")
+  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/push")
 
 
-proc pluginSet*(docker: Docker | AsyncDocker, name: string, body: seq[string]): Response =
+proc pluginSet*(docker: Docker | AsyncDocker, name: string, body: seq[string]): Future[Response | AsyncResponse] {.multiSync.} =
   ## Configure a plugin
   docker.client.headers["Content-Type"] = "application/json"
-  await docker.client.post(docker.basepath & fmt"/plugins/{name}/set", $(%body))
+  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/set", $(%body))
 
 
-proc pluginUpgrade*(docker: Docker | AsyncDocker, name: string, remote: string, xRegistryAuth: string, body: seq[PluginPrivilege]): Response =
+proc pluginUpgrade*(docker: Docker | AsyncDocker, name: string, remote: string, xRegistryAuth: string, body: seq[PluginPrivilege]): Future[Response | AsyncResponse] {.multiSync.} =
   ## Upgrade a plugin
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
   let query_for_api_call = encodeQuery([
     ("remote", $remote), # Remote reference to upgrade to.  The `:latest` tag is optional, and is used as the default if omitted. 
   ])
-  await docker.client.post(docker.basepath & fmt"/plugins/{name}/upgrade" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/upgrade" & "?" & query_for_api_call, $(%body))
 

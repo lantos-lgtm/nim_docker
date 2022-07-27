@@ -28,10 +28,10 @@ import ../models/model_network_prune_response
 import asyncdispatch
 
 
-proc networkConnect*(docker: Docker | AsyncDocker, id: string, container: NetworkDisconnectRequest): Response =
+proc networkConnect*(docker: Docker | AsyncDocker, id: string, container: NetworkDisconnectRequest): Future[Response | AsyncResponse] {.multiSync.} =
   ## Connect a container to a network
   docker.client.headers["Content-Type"] = "application/json"
-  await docker.client.post(docker.basepath & fmt"/networks/{id}/connect", $(%container))
+  return await docker.client.post(docker.basepath & fmt"/networks/{id}/connect", $(%container))
 
 
 proc networkCreate*(docker: Docker | AsyncDocker, networkConfig: NetworkCreateRequest): Future[NetworkCreateResponse] {.multiSync.} =
@@ -42,15 +42,15 @@ proc networkCreate*(docker: Docker | AsyncDocker, networkConfig: NetworkCreateRe
   return await constructResult1[NetworkCreateResponse](response)
 
 
-proc networkDelete*(docker: Docker | AsyncDocker, id: string): Response =
+proc networkDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Remove a network
-  await docker.client.delete(docker.basepath & fmt"/networks/{id}")
+  return await docker.client.delete(docker.basepath & fmt"/networks/{id}")
 
 
-proc networkDisconnect*(docker: Docker | AsyncDocker, id: string, container: NetworkConnectRequest): Response =
+proc networkDisconnect*(docker: Docker | AsyncDocker, id: string, container: NetworkConnectRequest): Future[Response | AsyncResponse] {.multiSync.} =
   ## Disconnect a container from a network
   docker.client.headers["Content-Type"] = "application/json"
-  await docker.client.post(docker.basepath & fmt"/networks/{id}/disconnect", $(%container))
+  return await docker.client.post(docker.basepath & fmt"/networks/{id}/disconnect", $(%container))
 
 
 proc networkInspect*(docker: Docker | AsyncDocker, id: string, verbose: bool, scope: string): Future[Network] {.multiSync.} =

@@ -20,6 +20,7 @@ import model_resources_blkio_weight_device_inner
 import model_resources_ulimits_inner
 import model_restart_policy
 import model_throttle_device
+import options
 
 # type CgroupnsMode* {.pure.} = enum
 #   Private
@@ -78,7 +79,7 @@ type HostConfig* = object
   containerIDFile*: string ## Path to a file where the container ID is written
   logConfig*: HostConfig_allOf_LogConfig
   networkMode*: string ## Network mode to use for this container. Supported standard values are: `bridge`, `host`, `none`, and `container:<name|id>`. Any other value is taken as a custom network's name to which this container should connect to. 
-  portBindings*: Table[string, seq[PortBinding]] ## PortMap describes the mapping of container ports to host ports, using the container's port-number and protocol as key in the format `<port>/<protocol>`, for example, `80/udp`.  If a container's port is mapped for multiple protocols, separate entries are added to the mapping table. 
+  portBindings*: Option[Table[string, seq[PortBinding]]] ## PortMap describes the mapping of container ports to host ports, using the container's port-number and protocol as key in the format `<port>/<protocol>`, for example, `80/udp`.  If a container's port is mapped for multiple protocols, separate entries are added to the mapping table. 
   restartPolicy*: RestartPolicy
   autoRemove*: bool ## Automatically remove the container when the container's process exits. This has no effect if `RestartPolicy` is set. 
   volumeDriver*: string ## Driver that this container uses to mount volumes.

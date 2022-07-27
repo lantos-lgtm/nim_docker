@@ -35,9 +35,9 @@ proc configCreate*(docker: Docker | AsyncDocker, body: ConfigCreateRequest): Fut
   return await constructResult1[IdResponse](response)
 
 
-proc configDelete*(docker: Docker | AsyncDocker, id: string): Response =
+proc configDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a config
-  await docker.client.delete(docker.basepath & fmt"/configs/{id}")
+  return await docker.client.delete(docker.basepath & fmt"/configs/{id}")
 
 
 proc configInspect*(docker: Docker | AsyncDocker, id: string): Future[Config] {.multiSync.} =
@@ -57,11 +57,11 @@ proc configList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Conf
   return await constructResult1[seq[Config]](response)
 
 
-proc configUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: ConfigSpec): Response =
+proc configUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: ConfigSpec): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a Config
   docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the config object being updated. This is required to avoid conflicting writes. 
   ])
-  await docker.client.post(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, $(%body))
 

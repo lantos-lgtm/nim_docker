@@ -14,7 +14,6 @@ import api_utils
 import options
 import strformat
 import strutils
-import tables
 import typetraits
 import uri
 
@@ -24,12 +23,12 @@ import ../models/model_node_spec
 import asyncdispatch
 
 
-proc nodeDelete*(docker: Docker | AsyncDocker, id: string, force: bool): Response =
+proc nodeDelete*(docker: Docker | AsyncDocker, id: string, force: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a node
   let query_for_api_call = encodeQuery([
     ("force", $force), # Force remove a node from the swarm
   ])
-  await docker.client.delete(docker.basepath & fmt"/nodes/{id}" & "?" & query_for_api_call)
+  return await docker.client.delete(docker.basepath & fmt"/nodes/{id}" & "?" & query_for_api_call)
 
 
 proc nodeInspect*(docker: Docker | AsyncDocker, id: string): Future[Node] {.multiSync.} =
@@ -49,11 +48,11 @@ proc nodeList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Node]]
   return await constructResult1[seq[Node]](response)
 
 
-proc nodeUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: NodeSpec): Response =
+proc nodeUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: NodeSpec): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a node
   docker.client.headers["Content-Type"] = "application/json"
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the node object being updated. This is required to avoid conflicting writes. 
   ])
-  await docker.client.post(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call, $(%body))
 

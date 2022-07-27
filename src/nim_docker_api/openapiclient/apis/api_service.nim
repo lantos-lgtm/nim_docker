@@ -35,9 +35,9 @@ proc serviceCreate*(docker: Docker | AsyncDocker, body: ServiceCreateRequest, xR
   return await constructResult1[ServiceCreateResponse](response)
 
 
-proc serviceDelete*(docker: Docker | AsyncDocker, id: string): Response =
+proc serviceDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a service
-  await docker.client.delete(docker.basepath & fmt"/services/{id}")
+  return await docker.client.delete(docker.basepath & fmt"/services/{id}")
 
 
 proc serviceInspect*(docker: Docker | AsyncDocker, id: string, insertDefaults: bool): Future[Service] {.multiSync.} =
