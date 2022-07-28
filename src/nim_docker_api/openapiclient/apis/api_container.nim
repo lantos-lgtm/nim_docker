@@ -8,7 +8,6 @@
 #
 
 import httpclient
-import json
 import jsony
 import api_utils
 import options
@@ -236,7 +235,7 @@ proc containerUpdate*(docker: Docker | AsyncDocker, id: string, update: Containe
   ## Update a container
   docker.client.headers["Content-Type"] = "application/json"
 
-  let response = await docker.client.post(docker.basepath & fmt"/containers/{id}/update", $(%update))
+  let response = await docker.client.post(docker.basepath & fmt"/containers/{id}/update", update.toJson())
   return await constructResult1[ContainerUpdateResponse](response)
 
 
@@ -258,4 +257,4 @@ proc putContainerArchive*(docker: Docker | AsyncDocker, id: string, path: string
     ("noOverwriteDirNonDir", $noOverwriteDirNonDir), # If `1`, `true`, or `True` then it will be an error if unpacking the given content would cause an existing directory to be replaced with a non-directory and vice versa. 
     ("copyUIDGID", $copyUIDGID), # If `1`, `true`, then it will copy UID/GID maps to the dest file or dir 
   ])
-  return await docker.client.put(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, $(%inputStream))
+  return await docker.client.put(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, inputStream.toJson())

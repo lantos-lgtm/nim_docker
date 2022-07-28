@@ -8,7 +8,6 @@
 #
 
 import httpclient
-import json
 import api_utils
 import options
 import strformat

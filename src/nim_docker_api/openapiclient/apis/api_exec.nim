@@ -8,7 +8,6 @@
 #
 
 import httpclient
-import json
 import jsony
 import api_utils
 import options
