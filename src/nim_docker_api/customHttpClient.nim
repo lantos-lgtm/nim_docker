@@ -4,10 +4,7 @@ import net
 import httpcore
 import strutils
 import uri
-import jsony
 import strformat
-import ./openapiclient/models/model_container_stats
-import ./openapiclient/apis/api_utils
 import tables
 # > GET /containers/myContainer/stats HTTP/1.1
 # > Host: localhost
@@ -22,6 +19,9 @@ import tables
 # < Ostype: linux
 # < Server: Docker/20.10.17 (linux)
 # < Transfer-Encoding: chunked
+
+
+export httpcore, uri
 
 type
     HttpClient* = object
@@ -75,6 +75,11 @@ proc sendHeaders*(client: HttpClient | AsyncHttpClient,
     # finish sending the headers
     await client.socket.send("\r\n")
 
+proc sendBody*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod, body: string): Future[void] {.multisync.} =
+
+    when not defined(release):
+        echo "> " & body
+    await client.socket.send(body)
 
 proc getChunks*(client: HttpClient | AsyncHttpClient, size: int): Future[
         string] {.multisync.} =
@@ -114,7 +119,7 @@ proc getData*(client: HttpClient | AsyncHttpClient): Future[
     # < 0123456789
     # this is size 10
     # < \r\n
-    # < 0
+    # < 0 This can also be \r\n
     # ENDED
     var
         chunkSize = -1
@@ -122,10 +127,12 @@ proc getData*(client: HttpClient | AsyncHttpClient): Future[
 
     if client.responseHeaders.getOrDefault("Transfer-Encoding").contains("chunked"):
         var chunkSizeData = (await client.socket.recvLine())
-        try:
-            chunkSize = fromHex[int](chunkSizeData)
-        except ValueError:
-            raise newException(HttpError, "Invalid chunk size value:" & chunkSizeData)
+        when not defined(release):
+            echo "< ", cast[seq[char]](chunkSizeData)
+        if chunkSizeData == "\r\n":
+            return chunkSizeData
+        chunkSize = fromHex[int](chunkSizeData)
+
 
     if client.responseHeaders.hasKey("Content-Length"):
         chunkSize = client.responseHeaders.getOrDefault(
@@ -134,7 +141,9 @@ proc getData*(client: HttpClient | AsyncHttpClient): Future[
     if chunkSize != -1:
         if chunkSize == 0:
             return data
-        return await client.getChunks(chunkSize)
+        data = await client.getChunks(chunkSize)
+        echo "< ", cast[seq[char]](data)
+        return data
 
     data = await client.socket.recvLine()
 
@@ -189,17 +198,15 @@ proc parseHttpVersion*(val: string): HttpVersion =
     else:
         raise newException(HttpError, "Invalid HTTP version: " & val)
 
-proc parseWelcomeMessage*(val: string): (HttpVersion, HttpCode) =
+proc parseWelcomeMessage*(val: string): (HttpVersion, HttpCode, string) =
     let
         parts = val.split(" ")
         version = parts[0].parseHttpVersion()
         status = HttpCode(parts[1].parseInt())
-        ok = parts[2]
-    if parts.len != 3:
-        raise newException(HttpError, "Invalid welcome message: " & val)
-    if ok.toLower() != "ok":
-        raise newException(HttpError, "Invalid welcome message: " & val)
-    return (version, status)
+        message = parts[2..^1].join(" ")
+
+    return (version, status, message)
+
 
 proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[
         HttpHeaders] {.multisync.} =
@@ -213,13 +220,15 @@ proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[
     ## User-Agent: curl/7.79.1
     let welcomeMessage = await client.getData()
     echo welcomeMessage
-    let (version, status) = welcomeMessage.parseWelcomeMessage()
+    let (version, status, message) = welcomeMessage.parseWelcomeMessage()
+
     when not defined(release):
         echo "HTTP version: " & $version
         echo "Status: " & $status
+        echo "Message: " & message
 
     for data in client.getData():
-        when defined(release):
+        when not defined(release):
             echo "< " & data
         if data == "\r\n":
             break
@@ -227,7 +236,7 @@ proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[
 
     return headers
 
-proc finds(val: string, find: string): seq[int] =
+proc finds*(val: string, find: string): seq[int] =
     if find.len == 0:
         return
     if find.len > val.len:
@@ -249,7 +258,7 @@ proc uriGetUnixSocketPath*(uri: Uri): (string, string) =
     else:
         return (conPath, "")
 
-proc initUnixSocket(uri: Uri | string): Socket =
+proc initUnixSocket*(uri: Uri | string): Socket =
     var tempUri: Uri
     when uri is string:
         tempUri = uri.parseUri()
@@ -262,7 +271,7 @@ proc initUnixSocket(uri: Uri | string): Socket =
     )
     result.connectUnix(tempUri.uriGetUnixSocketPath()[0])
 
-proc initAsyncUnixSocket(uri: Uri | string): Future[AsyncSocket] {.async.} =
+proc initAsyncUnixSocket*(uri: Uri | string): Future[AsyncSocket] {.async.} =
     var tempUri: Uri
     when uri is string:
         tempUri = uri.parseUri()
@@ -276,7 +285,7 @@ proc initAsyncUnixSocket(uri: Uri | string): Future[AsyncSocket] {.async.} =
     await result.connectUnix(tempUri.uriGetUnixSocketPath()[0])
 
 # can I merge these two?
-proc initSocket(client: HttpClient, uri: Uri): Socket =
+proc initSocket*(client: HttpClient, uri: Uri): Socket =
     var isSsl = false
     var socket: Socket
 
@@ -304,7 +313,7 @@ proc initSocket(client: HttpClient, uri: Uri): Socket =
 
     return socket
 
-proc initAsyncSocket(client: AsyncHttpClient, uri: Uri): Future[
+proc initAsyncSocket*(client: AsyncHttpClient, uri: Uri): Future[
         AsyncSocket] {.async.} =
     var isSsl = false
     var socket: AsyncSocket
@@ -366,7 +375,7 @@ proc initClient*(basepath: string, headers: HttpHeaders = nil,
     client.responseHeaders = newHttpHeaders()
     return client
 
-proc initAsyncClient(basepath: string, headers: HttpHeaders = nil,
+proc initAsyncClient*(basepath: string, headers: HttpHeaders = nil,
         sslContext: SslContext = nil): Future[AsyncHttpClient] {.async.} =
     var client: AsyncHttpClient
 
@@ -393,8 +402,23 @@ proc initAsyncClient(basepath: string, headers: HttpHeaders = nil,
 
 # TODO: requests
 # TODO: MultiPart Requests
-proc request*(client: AsyncHttpClient, httpMethod: HttpMethod = HttpGet,
-        uri: Uri | string): Future[AsyncHttpClient] {.async.} =
+# wish that there was no issue with async & iterators in Nim
+# noLentIterators means I have to return the client and let the user modify the client
+proc request*(
+    client: HttpClient | AsyncHttpClient,
+    httpMethod: HttpMethod = HttpGet,
+    uri: Uri | string,
+    body: string = "",
+    headers: HttpHeaders = nil
+    ): Future[HttpClient | AsyncHttpClient] {.multisync.} =
+    # 1. send greeting
+    # 2. add multipart len to headers || add body len to headers
+    # 3. send headers
+    # 4. send multipart data || body 
+    # 5. get response headers
+    # 6. return response headers
+    # 7. user then can get body outside of this proc
+
     var tempUri: Uri
     var tempClient = client
     when uri is string:
@@ -406,98 +430,14 @@ proc request*(client: AsyncHttpClient, httpMethod: HttpMethod = HttpGet,
 
     if tempUri.scheme == "unix":
         path = tempUri.uriGetUnixSocketPath()[1]
-
 
     await tempClient.sendGreeting(httpMethod, path)
-    await tempClient.sendHeaders()
+    if body != "":
+        tempClient.headers.add("Content-Length", $body.len)
+        if not headers.isNil:
+            headers.add("Content-Length", $body.len)
+    await tempClient.sendHeaders(headers)
+    await tempClient.sendBody(httpMethod, body)
+    
     tempClient.responseHeaders = await tempClient.getHeaderResponse()
     return tempClient
-
-proc request*(client: var HttpClient, httpMethod: HttpMethod = HttpGet,
-        uri: Uri | string): HttpClient =
-    var tempUri: Uri
-    var tempClient = client
-    when uri is string:
-        tempUri = uri.parseUri()
-    when uri is Uri:
-        tempUri = uri
-
-    var path = tempUri.hostname & tempUri.path
-
-    if tempUri.scheme == "unix":
-        path = tempUri.uriGetUnixSocketPath()[1]
-
-    tempClient.sendGreeting(httpMethod, path)
-    tempClient.sendHeaders()
-    tempClient.responseHeaders = tempClient.getHeaderResponse()
-    return tempClient
-
-let basepath = "unix:///var/run/docker.sock"
-let headers = newHttpHeaders({
-    "Host": "v1.41",
-    "User-Agent": "nimHttp",
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-    # "Transfer-Encoding": "chunked",
-        # "Content-Length": "0"
-})
-
-proc main() =
-    var client = initClient(basepath, headers)
-    client = client.request(HttpMethod.HttpGet, "/containers/myContainer/stats")
-
-    # get the body response
-    for i in 0..3:
-        let data = client.getData()
-        if data == "\r\n":
-            break
-        echo "< " & data
-
-
-proc mainAsync() {.async.} =
-    var client = await initAsyncClient(basepath, headers)
-    client = await client.request(HttpMethod.HttpGet, "/containers/myContainer/stats")
-
-    # get the body response
-    for i in 0..3:
-        let data = await client.getData()
-        if data == "\r\n":
-            break
-        echo "< " & data
-
-iterator containerStats*(docker: var Docker, id: string, stream: bool,
-        oneShot: bool): ContainerStats =
-    ## Get container stats based on resource usage
-    let query_for_api_call = encodeQuery([
-        ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect.
-        ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`.
-    ])
-    docker.client = docker.client.request(HttpMethod.HttpGet, docker.basepath &
-            fmt"/containers/{id}/stats" & "?" & query_for_api_call)
-    for data in docker.client.getData():
-        yield data.fromJson(ContainerStats)
-
-
-
-when isMainModule:
-    # main()
-    # waitFor mainAsync()
-
-
-    let headers1 = newHttpHeaders({
-        "User-Agent": "nimHttp",
-        "Accept": "*/*",
-        "Content-Type": "*/*",
-    })
-
-    # var client = initClient("http://info.cern.ch", headers1)
-    # client = client.request(HttpGet, "/hypertext/WWW/TheProject.html" )
-    # for data in client.getData():
-    #     echo data
-
-
-    var client = initClient("https://www.york.ac.uk", headers1)
-    client = client.request(HttpGet, "/teaching/cws/wws/webpage1.html")
-    echo client.responseHeaders
-    for data in client.getData():
-        echo data
