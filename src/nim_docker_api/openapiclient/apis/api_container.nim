@@ -85,7 +85,7 @@ proc containerCreate*(docker: Docker | AsyncDocker, body: ContainerCreateRequest
     ("name", $name), # Assign the specified name to the container. Must match `/?[a-zA-Z0-9][a-zA-Z0-9_.-]+`. 
   ])
 
-  let response = await docker.client.post(docker.basepath & "/containers/create" & "?" & query_for_api_call, $(%body))
+  let response = await docker.client.post(docker.basepath & "/containers/create" & "?" & query_for_api_call,  body.toJson())
   return await constructResult1[ContainerCreateResponse](response)
 
 

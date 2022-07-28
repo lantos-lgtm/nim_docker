@@ -31,7 +31,7 @@ proc configCreate*(docker: Docker | AsyncDocker, body: ConfigCreateRequest): Fut
   ## Create a config
   docker.client.headers["Content-Type"] = "application/json"
 
-  let response = await docker.client.post(docker.basepath & "/configs/create", $(%body))
+  let response = await docker.client.post(docker.basepath & "/configs/create",  body.toJson())
   return await constructResult1[IdResponse](response)
 
 
@@ -63,5 +63,5 @@ proc configUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, bod
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the config object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.post(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call,  body.toJson())
 

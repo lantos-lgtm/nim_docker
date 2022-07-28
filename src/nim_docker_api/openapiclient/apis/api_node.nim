@@ -54,5 +54,5 @@ proc nodeUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body:
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the node object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.post(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call,  body.toJson())
 

@@ -30,7 +30,7 @@ proc swarmInit*(docker: Docker | AsyncDocker, body: SwarmInitRequest): Future[st
   ## Initialize a new swarm
   docker.client.headers["Content-Type"] = "application/json"
 
-  # let response = await docker.client.post(docker.basepath & "/swarm/init", $(%body))
+  # let response = await docker.client.post(docker.basepath & "/swarm/init",  body.toJson())
   let response = await docker.client.post(docker.basepath & "/swarm/init", body.toJson())
   return await constructResult1[string](response)
 
@@ -45,7 +45,7 @@ proc swarmInspect*(docker: Docker | AsyncDocker): Future[Swarm] {.multiSync.} =
 proc swarmJoin*(docker: Docker | AsyncDocker, body: SwarmJoinRequest): Future[Response | AsyncResponse] {.multiSync.} =
   ## Join an existing swarm
   docker.client.headers["Content-Type"] = "application/json"
-  # httpClient.post(docker.basepath & "/swarm/join", $(%body))
+  # httpClient.post(docker.basepath & "/swarm/join",  body.toJson())
   return await docker.client.post(docker.basepath & "/swarm/join", body.toJson())
 
 
@@ -60,7 +60,7 @@ proc swarmLeave*(docker: Docker | AsyncDocker, force: bool): Future[Response | A
 proc swarmUnlock*(docker: Docker | AsyncDocker, body: SwarmUnlockRequest): Future[Response | AsyncResponse] {.multiSync.} =
   ## Unlock a locked manager
   docker.client.headers["Content-Type"] = "application/json"
-  # httpClient.post(docker.basepath & "/swarm/unlock", $(%body))
+  # httpClient.post(docker.basepath & "/swarm/unlock",  body.toJson())
   return await docker.client.post(docker.basepath & "/swarm/unlock", body.toJson())
 
 
@@ -80,6 +80,6 @@ proc swarmUpdate*(docker: Docker | AsyncDocker, version: int64, body: SwarmSpec,
     ("rotateManagerToken", $rotateManagerToken), # Rotate the manager join token.
     ("rotateManagerUnlockKey", $rotateManagerUnlockKey), # Rotate the manager unlock key.
   ])
-  # httpClient.post(docker.basepath & "/swarm/update" & "?" & query_for_api_call, $(%body))
+  # httpClient.post(docker.basepath & "/swarm/update" & "?" & query_for_api_call,  body.toJson())
   return await docker.client.post(docker.basepath & "/swarm/update" & "?" & query_for_api_call, body.toJson())
 

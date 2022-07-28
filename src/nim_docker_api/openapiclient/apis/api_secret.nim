@@ -29,7 +29,7 @@ proc secretCreate*(docker: Docker | AsyncDocker, body: SecretCreateRequest): Fut
   ## Create a secret
   docker.client.headers["Content-Type"] = "application/json"
 
-  let response = await docker.client.post(docker.basepath & "/secrets/create", $(%body))
+  let response = await docker.client.post(docker.basepath & "/secrets/create",  body.toJson())
   return await constructResult1[IdResponse](response)
 
 
@@ -61,5 +61,5 @@ proc secretUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, bod
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the secret object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.post(docker.basepath & fmt"/secrets/{id}/update" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/secrets/{id}/update" & "?" & query_for_api_call,  body.toJson())
 

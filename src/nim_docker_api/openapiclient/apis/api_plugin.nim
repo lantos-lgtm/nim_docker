@@ -90,7 +90,7 @@ proc pluginPull*(docker: Docker | AsyncDocker, remote: string, name: string, xRe
     ("remote", $remote), # Remote reference for plugin to install.  The `:latest` tag is optional, and is used as the default if omitted. 
     ("name", $name), # Local name for the pulled plugin.  The `:latest` tag is optional, and is used as the default if omitted. 
   ])
-  return await docker.client.post(docker.basepath & "/plugins/pull" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & "/plugins/pull" & "?" & query_for_api_call,  body.toJson())
 
 
 proc pluginPush*(docker: Docker | AsyncDocker, name: string): Future[Response | AsyncResponse] {.multiSync.} =
@@ -101,7 +101,7 @@ proc pluginPush*(docker: Docker | AsyncDocker, name: string): Future[Response | 
 proc pluginSet*(docker: Docker | AsyncDocker, name: string, body: seq[string]): Future[Response | AsyncResponse] {.multiSync.} =
   ## Configure a plugin
   docker.client.headers["Content-Type"] = "application/json"
-  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/set", $(%body))
+  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/set",  body.toJson())
 
 
 proc pluginUpgrade*(docker: Docker | AsyncDocker, name: string, remote: string, xRegistryAuth: string, body: seq[PluginPrivilege]): Future[Response | AsyncResponse] {.multiSync.} =
@@ -111,5 +111,5 @@ proc pluginUpgrade*(docker: Docker | AsyncDocker, name: string, remote: string, 
   let query_for_api_call = encodeQuery([
     ("remote", $remote), # Remote reference to upgrade to.  The `:latest` tag is optional, and is used as the default if omitted. 
   ])
-  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/upgrade" & "?" & query_for_api_call, $(%body))
+  return await docker.client.post(docker.basepath & fmt"/plugins/{name}/upgrade" & "?" & query_for_api_call,  body.toJson())
 

@@ -31,7 +31,7 @@ proc serviceCreate*(docker: Docker | AsyncDocker, body: ServiceCreateRequest, xR
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
 
-  let response = await docker.client.post(docker.basepath & "/services/create", $(%body))
+  let response = await docker.client.post(docker.basepath & "/services/create",  body.toJson())
   return await constructResult1[ServiceCreateResponse](response)
 
 
@@ -87,6 +87,6 @@ proc serviceUpdate*(docker: Docker | AsyncDocker, id: string, version: int, body
     ("rollback", $rollback), # Set to this parameter to `previous` to cause a server-side rollback to the previous service spec. The supplied spec will be ignored in this case. 
   ])
 
-  let response = await docker.client.post(docker.basepath & fmt"/services/{id}/update" & "?" & query_for_api_call, $(%body))
+  let response = await docker.client.post(docker.basepath & fmt"/services/{id}/update" & "?" & query_for_api_call,  body.toJson())
   return await constructResult1[ServiceUpdateResponse](response)
 
