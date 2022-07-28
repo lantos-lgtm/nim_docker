@@ -30,19 +30,19 @@ proc configCreate*(docker: Docker | AsyncDocker, body: ConfigCreateRequest): Fut
   ## Create a config
   docker.client.headers["Content-Type"] = "application/json"
 
-  let response = await docker.client.post(docker.basepath & "/configs/create",  body.toJson())
+  let response = await docker.client.request(docker.basepath & "/configs/create", HttpMethod.HttpPost, body.toJson())
   return await constructResult1[IdResponse](response)
 
 
 proc configDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a config
-  return await docker.client.delete(docker.basepath & fmt"/configs/{id}")
+  return await docker.client.request(docker.basepath & fmt"/configs/{id}", delete)
 
 
 proc configInspect*(docker: Docker | AsyncDocker, id: string): Future[Config] {.multiSync.} =
   ## Inspect a config
 
-  let response = await docker.client.get(docker.basepath & fmt"/configs/{id}")
+  let response = await docker.client.request(docker.basepath & fmt"/configs/{id}", HttpMethod.HttpGet)
   return await constructResult1[Config](response)
 
 
@@ -52,7 +52,7 @@ proc configList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Conf
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the configs list.  Available filters:  - `id=<config id>` - `label=<key> or label=<key>=value` - `name=<config name>` - `names=<config name>` 
   ])
 
-  let response = await docker.client.get(docker.basepath & "/configs" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & "/configs" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[seq[Config]](response)
 
 
@@ -62,5 +62,5 @@ proc configUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, bod
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the config object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.post(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call,  body.toJson())
+  return await docker.client.request(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, HttpMethod.HttpPost, body.toJson())
 

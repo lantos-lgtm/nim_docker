@@ -14,5 +14,5 @@ import asyncdispatch
 
 proc session*(docker: Docker | AsyncDocker): Future[Response | AsyncResponse] {.multisync.} =
   ## Initialize interactive session
-  return await docker.client.post(docker.basepath & "/session")
+  return await docker.client.request(docker.basepath & "/session", HttpMethod.HttpPost)
 

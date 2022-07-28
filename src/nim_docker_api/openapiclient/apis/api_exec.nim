@@ -10,7 +10,6 @@
 import httpclient
 import jsony
 import api_utils
-import options
 import strformat
 import strutils
 import typetraits
@@ -28,14 +27,14 @@ proc containerExec*(docker: Docker | AsyncDocker, id: string, execConfig: ExecCo
   ## Create an exec instance
   docker.client.headers["Content-Type"] = "application/json"
 
-  let response = await docker.client.post(docker.basepath & fmt"/containers/{id}/exec", $(%execConfig))
+  let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/exec", HttpMethod.HttpPost, execConfig.toJson())
   return await constructResult1[IdResponse](response)
 
 
 proc execInspect*(docker: Docker | AsyncDocker, id: string): Future[ExecInspectResponse] {.multiSync.} =
   ## Inspect an exec instance
 
-  let response = await docker.client.get(docker.basepath & fmt"/exec/{id}/json")
+  let response = await docker.client.request(docker.basepath & fmt"/exec/{id}/json", HttpMethod.HttpGet)
   return await constructResult1[ExecInspectResponse](response)
 
 
@@ -45,11 +44,11 @@ proc execResize*(docker: Docker | AsyncDocker, id: string, h: int, w: int): Futu
     ("h", $h), # Height of the TTY session in characters
     ("w", $w), # Width of the TTY session in characters
   ])
-  return await docker.client.post(docker.basepath & fmt"/exec/{id}/resize" & "?" & query_for_api_call)
+  return await docker.client.request(docker.basepath & fmt"/exec/{id}/resize" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
 
 proc execStart*(docker: Docker | AsyncDocker, id: string, execStartConfig: ExecStartConfig): Future[Response | AsyncResponse] {.multiSync.} =
   ## Start an exec instance
   docker.client.headers["Content-Type"] = "application/json"
-  return await docker.client.post(docker.basepath & fmt"/exec/{id}/start", $(%execStartConfig))
+  return await docker.client.request(docker.basepath & fmt"/exec/{id}/start", HttpMethod.HttpPost, execStartConfig.toJson())
 

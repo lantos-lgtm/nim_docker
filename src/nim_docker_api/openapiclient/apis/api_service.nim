@@ -30,13 +30,13 @@ proc serviceCreate*(docker: Docker | AsyncDocker, body: ServiceCreateRequest, xR
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
 
-  let response = await docker.client.post(docker.basepath & "/services/create",  body.toJson())
+  let response = await docker.client.request(docker.basepath & "/services/create", HttpMethod.HttpPost, body.toJson())
   return await constructResult1[ServiceCreateResponse](response)
 
 
 proc serviceDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a service
-  return await docker.client.delete(docker.basepath & fmt"/services/{id}")
+  return await docker.client.request(docker.basepath & fmt"/services/{id}", HttpMethod.HttpDelete)
 
 
 proc serviceInspect*(docker: Docker | AsyncDocker, id: string, insertDefaults: bool): Future[Service] {.multiSync.} =
@@ -45,7 +45,7 @@ proc serviceInspect*(docker: Docker | AsyncDocker, id: string, insertDefaults: b
     ("insertDefaults", $insertDefaults), # Fill empty fields with default values.
   ])
 
-  let response = await docker.client.get(docker.basepath & fmt"/services/{id}" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & fmt"/services/{id}" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[Service](response)
 
 
@@ -56,7 +56,7 @@ proc serviceList*(docker: Docker | AsyncDocker, filters: string, status: bool): 
     ("status", $status), # Include service status, with count of running and desired tasks. 
   ])
 
-  let response = await docker.client.get(docker.basepath & "/services" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & "/services" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[seq[Service]](response)
 
 
@@ -72,7 +72,7 @@ proc serviceLogs*(docker: Docker | AsyncDocker, id: string, details: bool, follo
     ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
   ])
 
-  let response = await docker.client.get(docker.basepath & fmt"/services/{id}/logs" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & fmt"/services/{id}/logs" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[string](response)
 
 
@@ -86,6 +86,6 @@ proc serviceUpdate*(docker: Docker | AsyncDocker, id: string, version: int, body
     ("rollback", $rollback), # Set to this parameter to `previous` to cause a server-side rollback to the previous service spec. The supplied spec will be ignored in this case. 
   ])
 
-  let response = await docker.client.post(docker.basepath & fmt"/services/{id}/update" & "?" & query_for_api_call,  body.toJson())
+  let response = await docker.client.request(docker.basepath & fmt"/services/{id}/update" & "?" & query_for_api_call, HttpMethod.HttpPost, body.toJson())
   return await constructResult1[ServiceUpdateResponse](response)
 

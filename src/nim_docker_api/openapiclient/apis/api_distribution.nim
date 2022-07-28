@@ -22,6 +22,6 @@ import asyncdispatch
 proc distributionInspect*(docker: Docker | AsyncDocker, name: string): Future[DistributionInspect] {.multiSync.} =
   ## Get image information from the registry
 
-  let response = await docker.client.get(docker.basepath & fmt"/distribution/{name}/json")
+  let response = await docker.client.request(docker.basepath & fmt"/distribution/{name}/json", HttpMethod.HttpGet)
   return await constructResult1[DistributionInspect](response)
 

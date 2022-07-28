@@ -27,13 +27,13 @@ proc nodeDelete*(docker: Docker | AsyncDocker, id: string, force: bool): Future[
   let query_for_api_call = encodeQuery([
     ("force", $force), # Force remove a node from the swarm
   ])
-  return await docker.client.delete(docker.basepath & fmt"/nodes/{id}" & "?" & query_for_api_call)
+  return await docker.client.request(docker.basepath & fmt"/nodes/{id}" & "?" & query_for_api_call, HttpMethod.HttpDelete)
 
 
 proc nodeInspect*(docker: Docker | AsyncDocker, id: string): Future[Node] {.multiSync.} =
   ## Inspect a node
 
-  let response = await docker.client.get(docker.basepath & fmt"/nodes/{id}")
+  let response = await docker.client.request(docker.basepath & fmt"/nodes/{id}", HttpMethod.HttpGet)
   return await constructResult1[Node](response)
 
 
@@ -43,7 +43,7 @@ proc nodeList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Node]]
     ("filters", $filters), # Filters to process on the nodes list, encoded as JSON (a `map[string][]string`).  Available filters: - `id=<node id>` - `label=<engine label>` - `membership=`(`accepted`|`pending`)` - `name=<node name>` - `node.label=<node label>` - `role=`(`manager`|`worker`)` 
   ])
 
-  let response = await docker.client.get(docker.basepath & "/nodes" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & "/nodes" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[seq[Node]](response)
 
 
@@ -53,5 +53,5 @@ proc nodeUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body:
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the node object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.post(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call,  body.toJson())
+  return await docker.client.request(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call,  HttpMethod.HttpPost, body.toJson())
 

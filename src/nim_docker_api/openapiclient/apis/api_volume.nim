@@ -9,6 +9,7 @@
 
 import httpclient
 import api_utils
+import jsony
 import options
 import strformat
 import strutils
@@ -27,7 +28,7 @@ proc volumeCreate*(docker: Docker | AsyncDocker, volumeConfig: VolumeCreateOptio
   ## Create a volume
   docker.client.headers["Content-Type"] = "application/json"
 
-  let response = await docker.client.post(docker.basepath & "/volumes/create", $(%volumeConfig))
+  let response = await docker.client.request(docker.basepath & "/volumes/create", HttpMethod.HttpPost, volumeConfig.toJson())
   return await constructResult1[Volume](response)
 
 
@@ -36,13 +37,13 @@ proc volumeDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Fut
   let query_for_api_call = encodeQuery([
     ("force", $force), # Force the removal of the volume
   ])
-  return await docker.client.delete(docker.basepath & fmt"/volumes/{name}" & "?" & query_for_api_call)
+  return await docker.client.request(docker.basepath & fmt"/volumes/{name}" & "?" & query_for_api_call, HttpMethod.HttpDelete)
 
 
 proc volumeInspect*(docker: Docker | AsyncDocker, name: string): Future[Volume] {.multiSync.} =
   ## Inspect a volume
 
-  let response = await docker.client.get(docker.basepath & fmt"/volumes/{name}")
+  let response = await docker.client.request(docker.basepath & fmt"/volumes/{name}", HttpMethod.HttpGet)
   return await constructResult1[Volume](response)
 
 
@@ -52,7 +53,7 @@ proc volumeList*(docker: Docker | AsyncDocker, filters: string): Future[VolumeLi
     ("filters", $filters), # JSON encoded value of the filters (a `map[string][]string`) to process on the volumes list. Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), returns all    volumes that are not in use by a container. When set to `false`    (or `0`), only volumes that are in use by one or more    containers are returned. - `driver=<volume-driver-name>` Matches volumes based on their driver. - `label=<key>` or `label=<key>:<value>` Matches volumes based on    the presence of a `label` alone or a `label` and a value. - `name=<volume-name>` Matches all or part of a volume name. 
   ])
 
-  let response = await docker.client.get(docker.basepath & "/volumes" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & "/volumes" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[VolumeListResponse](response)
 
 
@@ -62,6 +63,6 @@ proc volumePrune*(docker: Docker | AsyncDocker, filters: string): Future[VolumeP
     ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune volumes with (or without, in case `label!=...` is used) the specified labels. 
   ])
 
-  let response = await docker.client.post(docker.basepath & "/volumes/prune" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & "/volumes/prune" & "?" & query_for_api_call, HttpMethod.HttpPost)
   return await constructResult1[VolumePruneResponse](response)
 

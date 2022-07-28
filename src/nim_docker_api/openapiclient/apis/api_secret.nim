@@ -28,19 +28,19 @@ proc secretCreate*(docker: Docker | AsyncDocker, body: SecretCreateRequest): Fut
   ## Create a secret
   docker.client.headers["Content-Type"] = "application/json"
 
-  let response = await docker.client.post(docker.basepath & "/secrets/create",  body.toJson())
+  let response = await docker.client.request(docker.basepath & "/secrets/create", HttpMethod.HttpPost, body.toJson())
   return await constructResult1[IdResponse](response)
 
 
 proc secretDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a secret
-  return await docker.client.delete(docker.basepath & fmt"/secrets/{id}")
+  return await docker.client.request(docker.basepath & fmt"/secrets/{id}", HttpMethod.HttpDelete)
 
 
 proc secretInspect*(docker: Docker | AsyncDocker, id: string): Future[Secret] {.multiSync.} =
   ## Inspect a secret
 
-  let response = await docker.client.get(docker.basepath & fmt"/secrets/{id}")
+  let response = await docker.client.request(docker.basepath & fmt"/secrets/{id}", HttpMethod.HttpGet)
   return await constructResult1[Secret](response)
 
 
@@ -50,7 +50,7 @@ proc secretList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Secr
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the secrets list.  Available filters:  - `id=<secret id>` - `label=<key> or label=<key>=value` - `name=<secret name>` - `names=<secret name>` 
   ])
 
-  let response = await docker.client.get(docker.basepath & "/secrets" & "?" & query_for_api_call)
+  let response = await docker.client.request(docker.basepath & "/secrets" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[seq[Secret]](response)
 
 
@@ -60,5 +60,5 @@ proc secretUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, bod
   let query_for_api_call = encodeQuery([
     ("version", $version), # The version number of the secret object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.post(docker.basepath & fmt"/secrets/{id}/update" & "?" & query_for_api_call,  body.toJson())
+  return await docker.client.request(docker.basepath & fmt"/secrets/{id}/update" & "?" & query_for_api_call, HttpMethod.HttpPost, body.toJson())
 
