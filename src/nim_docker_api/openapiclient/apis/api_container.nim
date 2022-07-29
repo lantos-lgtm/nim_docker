@@ -9,7 +9,7 @@
 
 import httpclient
 import jsony
-import api_utils
+import ../utils
 import options
 import strformat
 import strutils
@@ -124,12 +124,13 @@ proc containerKill*(docker: Docker | AsyncDocker, id: string, signal: string): F
 proc containerList*(docker: Docker | AsyncDocker, all: bool = false,
     limit: Option[int] = none(int), size: bool = false,
     filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])): Future[seq[ContainerSummary]] {.multiSync.} =
-  var query_for_api_call_array: seq[(string, string)] = @[]
-  encode query_for_api_call_array:
-    all # Return all containers. By default, only running containers are shown. 
-    limit # Return this number of most recently created containers, including non-running ones. 
-    size # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
-    filters # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
+  var query_for_api_call_array: seq[(string, string)] = @[
+    ("all", $all), # Return all containers. By default, only running containers are shown. 
+    ("limit", $limit), # Return this number of most recently created containers, including non-running ones. 
+    ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
+    ("filters", $filters), # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
+
+  ]
   let query_for_api_call = query_for_api_call_array.encodeQuery()
   let response = await docker.client.request(docker.basepath & "/containers/json" & "?" & query_for_api_call, HttpMethod.HttpGet)
   return await constructResult1[seq[ContainerSummary]](response)
@@ -137,15 +138,15 @@ proc containerList*(docker: Docker | AsyncDocker, all: bool = false,
 proc containerLogs*(docker: Docker | AsyncDocker, id: string, follow: bool, stdout: bool, stderr: bool, since: int, until: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
   ## Get container logs
   
-  var query_for_api_call_array: seq[(string, string)] = @[]
-  encode query_for_api_call_array:
-    follow # Keep connection after returning logs.
-    stdout # Return logs from `stdout`
-    stderr # Return logs from `stderr`
-    since # Only return logs since this time, as a UNIX timestamp
-    until # Only return logs before this time, as a UNIX timestamp
-    timestamps # Add timestamps to every log line
-    tail # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
+  var query_for_api_call_array: seq[(string, string)] = @[
+    ("follow", $follow), # Keep connection after returning logs.
+    ("stdout", $stdout), # Return logs from `stdout`
+    ("stderr", $stderr), # Return logs from `stderr`
+    ("since", $since), # Only return logs since this time, as a UNIX timestamp
+    ("until", $until), # Only return logs before this time, as a UNIX timestamp
+    ("timestamps", $timestamps), # Add timestamps to every log line
+    ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
+  ]
   let query_for_api_call = query_for_api_call_array.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/logs" & "?" & query_for_api_call, HttpMethod.HttpGet)

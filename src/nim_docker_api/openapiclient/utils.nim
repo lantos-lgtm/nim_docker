@@ -1,5 +1,5 @@
 import jsony
-import typetraits
+# import typetraits
 import httpclient
 import macros
 import options
@@ -10,6 +10,7 @@ import streams
 import asyncstreams
 import asyncdispatch
 import net
+import uri
 
 type
   Docker* = object
@@ -68,49 +69,35 @@ proc constructResult1*[T](response: Response | AsyncResponse): Future[T] {.multi
     raise newException(NotFound, await response.body())
   else:
     raise newException(ServerError, await response.body())
+  
 
+# macro encode*(dest: untyped, statements: untyped): untyped =
+#   runnableExamples:
+#     # create the destination for the string
+#     var dest: seq[(string, string)] = @[]
+#     # a bunch of data to encode
+#     var a = "hello"
+#     var aOption = some("helloOption")
+#     var aTable = {"hello": "world"}.toTable()
+#     # populate the destination
+#     encode dest:
+#       a
+#       aOption
+#       aTable
+#     # encode the string
+#     echo dest.encodeQuery()
 
-template constructResult*[T](response: Response): untyped =
-  if response.code in {Http200, Http201, Http202, Http204, Http206}:
-    (some(response.body().fromJson(T.typedesc)), response)
-  else:
-    (none(T.typedesc), response)
-    
-proc addEncode*[T](destination: var seq[(string, string)], name: string, value: T) =
-  destination.add((name, value.toJson()))
-
-proc addEncode*[T](destination: var seq[(string, string)], name: string, value: Option[T]) =
-  if value.isSome():
-    destination.add((name, (value.get()).toJson()))
-
-
-macro encode*(dest: untyped, statements: untyped): untyped =
-  runnableExamples:
-    # create the destination for the string
-    var dest: seq[(string, string)] = @[]
-    # a bunch of data to encode
-    var a = "hello"
-    var aOption = some("helloOption")
-    var aTable = {"hello": "world"}.toTable()
-    # populate the destination
-    encode dest:
-      a
-      aOption
-      aTable
-    # encode the string
-    echo dest.encodeQuery()
-
-  result = newStmtList()
-  for statement in statements:
-    let exprNode = newStmtList(
-        newCall(
-          newIdentNode("addEncode"),
-          newIdentNode(dest.strVal),
-          newStrLitNode(statement.strVal),
-          newIdentNode(statement.strVal)
-        )
-      )
-    result.add(exprNode)
+#   result = newStmtList()
+#   for statement in statements:
+#     let exprNode = newStmtList(
+#         newCall(
+#           newIdentNode("addEncode"),
+#           newIdentNode(dest.strVal),
+#           newStrLitNode(statement.strVal),
+#           newIdentNode(statement.strVal)
+#         )
+#       )
+#     result.add(exprNode)
 
 
 # parse hook to convert GO time.time.rfc3339nano to nim time

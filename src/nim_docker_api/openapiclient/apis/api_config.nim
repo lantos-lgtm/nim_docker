@@ -9,7 +9,7 @@
 
 import httpclient
 import jsony
-import api_utils
+import ../utils
 import options
 import strformat
 import strutils
@@ -36,7 +36,7 @@ proc configCreate*(docker: Docker | AsyncDocker, body: ConfigCreateRequest): Fut
 
 proc configDelete*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a config
-  return await docker.client.request(docker.basepath & fmt"/configs/{id}", delete)
+  return await docker.client.request(docker.basepath & fmt"/configs/{id}", HttpMethod.HttpDelete)
 
 
 proc configInspect*(docker: Docker | AsyncDocker, id: string): Future[Config] {.multiSync.} =

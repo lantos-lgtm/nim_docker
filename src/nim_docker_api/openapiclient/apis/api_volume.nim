@@ -8,7 +8,7 @@
 #
 
 import httpclient
-import api_utils
+import ../utils
 import jsony
 import options
 import strformat
