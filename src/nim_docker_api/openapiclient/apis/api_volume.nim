@@ -16,6 +16,7 @@ import strutils
 import typetraits
 import uri
 import asyncdispatch
+import ../oldDockerClient
 
 import ../models/model_volume
 import ../models/model_volume_create_options

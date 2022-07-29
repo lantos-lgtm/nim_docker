@@ -15,6 +15,7 @@ import strutils
 import tables
 import typetraits
 import uri
+import ../oldDockerClient
 
 import ../models/model_auth_config
 import ../models/model_event_message

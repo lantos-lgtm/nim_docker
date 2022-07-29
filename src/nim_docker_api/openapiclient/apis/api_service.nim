@@ -15,6 +15,7 @@ import strformat
 import strutils
 import typetraits
 import uri
+import ../oldDockerClient
 
 import ../models/model_service
 import ../models/model_service_create_response

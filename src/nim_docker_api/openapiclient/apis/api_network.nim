@@ -16,6 +16,7 @@ import strutils
 import tables
 import typetraits
 import uri
+import ../oldDockerClient
 
 import ../models/model_network
 import ../models/model_network_connect_request

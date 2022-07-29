@@ -15,6 +15,7 @@ import strformat
 import strutils
 import typetraits
 import ../models/model_distribution_inspect
+import ../oldDockerClient
 
 import asyncdispatch
 

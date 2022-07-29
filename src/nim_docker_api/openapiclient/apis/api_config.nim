@@ -16,6 +16,7 @@ import strutils
 import tables
 import typetraits
 import uri
+import ../oldDockerClient
 
 import ../models/model_config
 import ../models/model_config_create_request

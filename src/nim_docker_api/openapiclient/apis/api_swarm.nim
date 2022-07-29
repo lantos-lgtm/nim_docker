@@ -15,6 +15,7 @@ import strutils
 import tables
 import typetraits
 import uri
+import ../oldDockerClient
 
 import ../models/model_swarm
 import ../models/model_swarm_init_request

@@ -10,6 +10,7 @@
 import httpclient
 import ../utils
 import asyncdispatch
+import ../oldDockerClient
 
 
 proc session*(docker: Docker | AsyncDocker): Future[Response | AsyncResponse] {.multisync.} =
