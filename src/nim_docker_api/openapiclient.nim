@@ -419,7 +419,7 @@ import openapiclient/apis/api_session
 import openapiclient/apis/api_swarm
 import openapiclient/apis/api_system
 import openapiclient/apis/api_task
-import openapiclient/apis/api_utils
+import openapiclient/utils
 import openapiclient/apis/api_volume
 
 export api_config
@@ -436,7 +436,7 @@ export api_session
 export api_swarm
 export api_system
 export api_task
-export api_utils
+export utils
 export api_volume
 
 
