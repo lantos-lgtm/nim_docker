@@ -49,19 +49,19 @@ proc configInspect*(docker: Docker | AsyncDocker, id: string): Future[Config] {.
 
 proc configList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Config]] {.multiSync.} =
   ## List configs
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the configs list.  Available filters:  - `id=<config id>` - `label=<key> or label=<key>=value` - `name=<config name>` - `names=<config name>` 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/configs" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & "/configs" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Config]](response)
 
 
 proc configUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: ConfigSpec): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a Config
   docker.client.headers["Content-Type"] = "application/json"
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("version", $version), # The version number of the config object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.request(docker.basepath & fmt"/configs/{id}/update" & "?" & query_for_api_call, HttpMethod.HttpPost, body.toJson())
+  return await docker.client.request(docker.basepath & fmt"/configs/{id}/update" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
 

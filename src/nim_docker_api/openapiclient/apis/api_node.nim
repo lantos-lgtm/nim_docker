@@ -25,10 +25,10 @@ import asyncdispatch
 
 proc nodeDelete*(docker: Docker | AsyncDocker, id: string, force: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Delete a node
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("force", $force), # Force remove a node from the swarm
   ])
-  return await docker.client.request(docker.basepath & fmt"/nodes/{id}" & "?" & query_for_api_call, HttpMethod.HttpDelete)
+  return await docker.client.request(docker.basepath & fmt"/nodes/{id}" & "?" & queryForApiCall, HttpMethod.HttpDelete)
 
 
 proc nodeInspect*(docker: Docker | AsyncDocker, id: string): Future[Node] {.multiSync.} =
@@ -40,19 +40,19 @@ proc nodeInspect*(docker: Docker | AsyncDocker, id: string): Future[Node] {.mult
 
 proc nodeList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Node]] {.multiSync.} =
   ## List nodes
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("filters", $filters), # Filters to process on the nodes list, encoded as JSON (a `map[string][]string`).  Available filters: - `id=<node id>` - `label=<engine label>` - `membership=`(`accepted`|`pending`)` - `name=<node name>` - `node.label=<node label>` - `role=`(`manager`|`worker`)` 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/nodes" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & "/nodes" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Node]](response)
 
 
 proc nodeUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: NodeSpec): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a node
   docker.client.headers["Content-Type"] = "application/json"
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("version", $version), # The version number of the node object being updated. This is required to avoid conflicting writes. 
   ])
-  return await docker.client.request(docker.basepath & fmt"/nodes/{id}/update" & "?" & query_for_api_call,  HttpMethod.HttpPost, body.toJson())
+  return await docker.client.request(docker.basepath & fmt"/nodes/{id}/update" & "?" & queryForApiCall,  HttpMethod.HttpPost, body.toJson())
 

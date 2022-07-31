@@ -332,10 +332,14 @@ proc parseHttpVersion*(val: string): HttpVersion =
 
 
 type
-    WelcomeMessage = object
-        httpVersion: HttpVersion
-        httpCode: HttpCode
-        message: string
+    WelcomeMessage* = object
+        httpVersion*: HttpVersion
+        httpCode*: HttpCode
+        message*: string
+
+    WelcomeResponse* = object
+        welcomeMessage*: WelcomeMessage
+        headers*: HttpHeaders
 
 proc parseWelcomeMessage*(val: string): WelcomeMessage =
     echo val
@@ -380,8 +384,12 @@ proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[HttpHeader
 # noLentIterators means I have to return the client and let the user modify the client
 
 type
-    Response = (HttpClient, HttpHeaders)
-    AsyncResponse = (AsyncHttpClient, HttpHeaders)
+    Response* = object
+        client*: HttpClient
+        response*: WelcomeResponse
+    AsyncResponse* = object
+        client*: AsyncHttpClient
+        response*: WelcomeResponse
 
 proc openRequest*(
     client: HttpClient | AsyncHttpClient,
@@ -421,9 +429,12 @@ proc openRequest*(
     await tempClient.sendBody(httpMethod, body)
 
     var responseHeaders = newHttpHeaders()
-
+    
     let welcomeMessage = await client.getWelcomeMessage(responseHeaders)
     responseHeaders = await tempClient.getHeaderResponse()
     
-
-    return (tempClient, responseHeaders)
+    result.client = tempClient
+    result.response = WelcomeResponse(
+        welcomeMessage: welcomeMessage,
+        headers: responseHeaders
+    )

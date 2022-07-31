@@ -33,13 +33,13 @@ import asyncdispatch
 
 proc buildPrune*(docker: Docker | AsyncDocker, keepStorage: int64, all: bool, filters: string): Future[BuildPruneResponse] {.multiSync.} =
   ## Delete builder cache
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("keep-storage", $keepStorage), # Amount of disk space in bytes to keep for cache
     ("all", $all), # Remove all types of build cache
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the list of build cache objects.  Available filters:  - `until=<duration>`: duration relative to daemon's time, during which build cache was not used, in Go's duration format (e.g., '24h') - `id=<id>` - `parent=<id>` - `type=<string>` - `description=<string>` - `inuse` - `shared` - `private` 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/build/prune" & "?" & query_for_api_call, HttpMethod.HttpPost)
+  let response = await docker.client.request(docker.basepath & "/build/prune" & "?" & queryForApiCall, HttpMethod.HttpPost)
   return await constructResult1[BuildPruneResponse](response)
 
 
@@ -48,7 +48,7 @@ proc imageBuild*(docker: Docker | AsyncDocker, dockerfile: string, t: string, ex
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["Content-type"] = contentType
   docker.client.headers["X-Registry-Config"] = xRegistryConfig
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("dockerfile", $dockerfile), # Path within the build context to the `Dockerfile`. This is ignored if `remote` is specified and points to an external `Dockerfile`.
     ("t", $t), # A name and optional tag to apply to the image in the `name:tag` format. If you omit the tag the default `latest` value is assumed. You can provide several `t` parameters.
     ("extrahosts", $extrahosts), # Extra hosts to add to /etc/hosts
@@ -74,13 +74,13 @@ proc imageBuild*(docker: Docker | AsyncDocker, dockerfile: string, t: string, ex
     ("target", $target), # Target build stage
     ("outputs", $outputs), # BuildKit output configuration
   ])
-  return await docker.client.request(docker.basepath & "/build" & "?" & query_for_api_call, HttpMethod.HttpPost, inputStream.toJson())
+  return await docker.client.request(docker.basepath & "/build" & "?" & queryForApiCall, HttpMethod.HttpPost, inputStream.toJson())
 
 
 proc imageCommit*(docker: Docker | AsyncDocker, container: string, repo: string, tag: string, comment: string, author: string, pause: bool, changes: string, containerConfig: ContainerConfig): Future[IdResponse] {.multiSync.} =
   ## Create a new image from a container
   docker.client.headers["Content-Type"] = "application/json"
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("container", $container), # The ID or name of the container to commit
     ("repo", $repo), # Repository name for the created image
     ("tag", $tag), # Tag name for the create image
@@ -90,7 +90,7 @@ proc imageCommit*(docker: Docker | AsyncDocker, container: string, repo: string,
     ("changes", $changes), # `Dockerfile` instructions to apply while committing
   ])
 
-  let response = await docker.client.request(docker.basepath & "/commit" & "?" & query_for_api_call, HttpMethod.HttpPost, containerConfig.toJson())
+  let response = await docker.client.request(docker.basepath & "/commit" & "?" & queryForApiCall, HttpMethod.HttpPost, containerConfig.toJson())
   return await constructResult1[IdResponse](response)
 
 
@@ -98,7 +98,7 @@ proc imageCreate*(docker: Docker | AsyncDocker, fromImage: string, fromSrc: stri
   ## Create an image
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("fromImage", $fromImage), # Name of the image to pull. The name may include a tag or digest. This parameter may only be used when pulling an image. The pull is cancelled if the HTTP connection is closed.
     ("fromSrc", $fromSrc), # Source to import. The value may be a URL from which the image can be retrieved or `-` to read the image from the request body. This parameter may only be used when importing an image.
     ("repo", $repo), # Repository name given to an image when it is imported. The repo may include a tag. This parameter may only be used when importing an image.
@@ -107,17 +107,17 @@ proc imageCreate*(docker: Docker | AsyncDocker, fromImage: string, fromSrc: stri
     ("changes", $changes.join(",")), # Apply `Dockerfile` instructions to the image that is created, for example: `changes=ENV DEBUG=true`. Note that `ENV DEBUG=true` should be URI component encoded.  Supported `Dockerfile` instructions: `CMD`|`ENTRYPOINT`|`ENV`|`EXPOSE`|`ONBUILD`|`USER`|`VOLUME`|`WORKDIR` 
     ("platform", $platform), # Platform in the format os[/arch[/variant]]
   ])
-  return await docker.client.request(docker.basepath & "/images/create" & "?" & query_for_api_call, HttpMethod.HttpPost, inputImage.toJson())
+  return await docker.client.request(docker.basepath & "/images/create" & "?" & queryForApiCall, HttpMethod.HttpPost, inputImage.toJson())
 
 
 proc imageDelete*(docker: Docker | AsyncDocker, name: string, force: bool, noprune: bool): Future[seq[ImageDeleteResponseItem]] {.multiSync.} =
   ## Remove an image
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("force", $force), # Remove the image even if it is being used by stopped containers or has other tags
     ("noprune", $noprune), # Do not delete untagged parent images
   ])
 
-  let response = await docker.client.request(docker.basepath & fmt"/images/{name}" & "?" & query_for_api_call, HttpMethod.HttpDelete)
+  let response = await docker.client.request(docker.basepath & fmt"/images/{name}" & "?" & queryForApiCall, HttpMethod.HttpDelete)
   return await constructResult1[seq[ImageDeleteResponseItem]](response)
 
 
@@ -130,11 +130,11 @@ proc imageGet*(docker: Docker | AsyncDocker, name: string): Future[string] {.mul
 
 proc imageGetAll*(docker: Docker | AsyncDocker, names: seq[string]): Future[string] {.multiSync.} =
   ## Export several images
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("names", $names.join(",")), # Image names to filter by
   ])
 
-  let response = await docker.client.request(docker.basepath & "/images/get" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & "/images/get" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[string](response)
 
 
@@ -154,61 +154,61 @@ proc imageInspect*(docker: Docker | AsyncDocker, name: string): Future[ImageInsp
 
 proc imageList*(docker: Docker | AsyncDocker, all: bool, filters: string, digests: bool): Future[seq[ImageSummary]] {.multiSync.} =
   ## List Images
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("all", $all), # Show all images. Only images from a final layer (no children) are shown by default.
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the images list.  Available filters:  - `before`=(`<image-name>[:<tag>]`,  `<image id>` or `<image@digest>`) - `dangling=true` - `label=key` or `label=\"key=value\"` of an image label - `reference`=(`<image-name>[:<tag>]`) - `since`=(`<image-name>[:<tag>]`,  `<image id>` or `<image@digest>`) 
     ("digests", $digests), # Show digest information as a `RepoDigests` field on each image.
   ])
 
-  let response = await docker.client.request(docker.basepath & "/images/json" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & "/images/json" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[ImageSummary]](response)
 
 
 proc imageLoad*(docker: Docker | AsyncDocker, quiet: bool, imagesTarball: string): Future[Response | AsyncResponse] {.multiSync.} =
   # images
   docker.client.headers["Content-Type"] = "application/json"
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("quiet", $quiet), # Suppress progress details during load.
   ])
-  return await docker.client.request(docker.basepath & "/images/load" & "?" & query_for_api_call, HttpMethod.HttpPost, imagesTarball.toJson())
+  return await docker.client.request(docker.basepath & "/images/load" & "?" & queryForApiCall, HttpMethod.HttpPost, imagesTarball.toJson())
 
 
 proc imagePrune*(docker: Docker | AsyncDocker, filters: string): Future[ImagePruneResponse] {.multiSync.} =
   ## Delete unused images
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`). Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), prune only    unused *and* untagged images. When set to `false`    (or `0`), all unused images are pruned. - `until=<string>` Prune images created before this timestamp. The `<timestamp>` can be Unix timestamps, date formatted timestamps, or Go duration strings (e.g. `10m`, `1h30m`) computed relative to the daemon machine’s time. - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune images with (or without, in case `label!=...` is used) the specified labels. 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/images/prune" & "?" & query_for_api_call, HttpMethod.HttpPost)
+  let response = await docker.client.request(docker.basepath & "/images/prune" & "?" & queryForApiCall, HttpMethod.HttpPost)
   return await constructResult1[ImagePruneResponse](response)
 
 
 proc imagePush*(docker: Docker | AsyncDocker, name: string, xRegistryAuth: string, tag: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Push an image
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("tag", $tag), # The tag to associate with the image on the registry.
   ])
-  return await docker.client.request(docker.basepath & fmt"/images/{name}/push" & "?" & query_for_api_call, HttpMethod.HttpPost)
+  return await docker.client.request(docker.basepath & fmt"/images/{name}/push" & "?" & queryForApiCall, HttpMethod.HttpPost)
 
 
 proc imageSearch*(docker: Docker | AsyncDocker, term: string, limit: int, filters: string): Future[seq[ImageSearchResponseItem]] {.multiSync.} =
   ## Search images
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("term", $term), # Term to search
     ("limit", $limit), # Maximum number of results to return
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the images list. Available filters:  - `is-automated=(true|false)` - `is-official=(true|false)` - `stars=<number>` Matches images that has at least 'number' stars. 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/images/search" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & "/images/search" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[ImageSearchResponseItem]](response)
 
 
 proc imageTag*(docker: Docker | AsyncDocker, name: string, repo: string, tag: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Tag an image
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("repo", $repo), # The repository to tag in. For example, `someuser/someimage`.
     ("tag", $tag), # The name of the new tag.
   ])
-  return await docker.client.request(docker.basepath & fmt"/images/{name}/tag" & "?" & query_for_api_call, HttpMethod.HttpPost)
+  return await docker.client.request(docker.basepath & fmt"/images/{name}/tag" & "?" & queryForApiCall, HttpMethod.HttpPost)
 

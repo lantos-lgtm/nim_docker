@@ -36,46 +36,31 @@ iterator containerStats*(
     oneShot: bool): ContainerStats =
 
     ## Get container stats based on resource usage
-    let query_for_api_call = encodeQuery([
+    let queryForApiCall = encodeQuery([
         ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect.
         ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`.
     ])
-    var (_, responseHeader) = docker.client.openRequest( docker.basepath & fmt"/containers/{id}/stats" & "?" & query_for_api_call, HttpMethod.HttpGet)
-    for data in docker.client.getData(responseHeader):
+    var response = docker.client.openRequest( docker.basepath & fmt"/containers/{id}/stats" & "?" & queryForApiCall, HttpMethod.HttpGet)
+    for data in docker.client.getData(response.response.headers):
         yield data.fromJson(ContainerStats)
 
 
 
 proc main() =
     var client = initHttpClient(basepath, headers)
-    var responseHeaders: HttpHeaders
-    (client, responseHeaders) = client.openRequest( "/containers/json", HttpMethod.HttpGet)
+    var response = client.openRequest( "/containers/json", HttpMethod.HttpGet)
 
 
-    for data in client.getData(responseHeaders):
-        echo "b< ",data
-        
-        # if data != "\r\n":
-        #     let containerStats = data.fromJson(ContainerStats)
+    var cs = newSeq[ContainerSummary]()
+    for data in client.getData(response.response.headers):
+        cs = data.fromJson(seq[ContainerSummary])
 
+    echo cs
 
-    # # get the body response
-    # var containerSummarys = newSeq[ContainerSummary]()
-    # for i in 0..3:
-    #     let data = client.getData(responseHeaders)
-    #     echo "< " & data
-    #     if data == "\r\n":
-    #         break
-    #     containerSummarys = data.fromJson(seq[ContainerSummary])
-
-    # echo containerSummarys
-
-    # client.socket.send()
-    # (client, responseHeaders) = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
-    # for data in client.getData(responseHeaders):
-    #     if data != "\r\n":
-    #         let containerStats = data.fromJson(ContainerStats)
-    #         echo containerStats
+    # var response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
+    response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
+    for data in client.getData(response.response.headers):
+        echo data.fromJson(ContainerStats)
 
 
 # proc mainAsync() {.async.} =

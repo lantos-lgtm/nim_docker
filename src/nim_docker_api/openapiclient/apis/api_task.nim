@@ -30,17 +30,17 @@ proc taskInspect*(docker: Docker | AsyncDocker, id: string): Future[Task] {.mult
 
 proc taskList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Task]] {.multiSync.} =
   ## List tasks
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the tasks list.  Available filters:  - `desired-state=(running | shutdown | accepted)` - `id=<task id>` - `label=key` or `label=\"key=value\"` - `name=<task name>` - `node=<node id or name>` - `service=<service name>` 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/tasks" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & "/tasks" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Task]](response)
 
 
 proc taskLogs*(docker: Docker | AsyncDocker, id: string, details: bool, follow: bool, stdout: bool, stderr: bool, since: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
   ## Get task logs
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("details", $details), # Show task context and extra details provided to logs.
     ("follow", $follow), # Keep connection after returning logs.
     ("stdout", $stdout), # Return logs from `stdout`
@@ -50,6 +50,6 @@ proc taskLogs*(docker: Docker | AsyncDocker, id: string, details: bool, follow: 
     ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
   ])
 
-  let response = await docker.client.request(docker.basepath & fmt"/tasks/{id}/logs" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & fmt"/tasks/{id}/logs" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[string](response)
 

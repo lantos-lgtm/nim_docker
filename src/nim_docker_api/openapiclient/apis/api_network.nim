@@ -55,31 +55,31 @@ proc networkDisconnect*(docker: Docker | AsyncDocker, id: string, container: Net
 
 proc networkInspect*(docker: Docker | AsyncDocker, id: string, verbose: bool, scope: string): Future[Network] {.multiSync.} =
   ## Inspect a network
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("verbose", $verbose), # Detailed inspect output for troubleshooting
     ("scope", $scope), # Filter the network by scope (swarm, global, or local)
   ])
 
-  let response = await docker.client.request(docker.basepath & fmt"/networks/{id}" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & fmt"/networks/{id}" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[Network](response)
 
 
 proc networkList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Network]] {.multiSync.} =
   ## List networks
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("filters", $filters), # JSON encoded value of the filters (a `map[string][]string`) to process on the networks list.  Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), returns all    networks that are not in use by a container. When set to `false`    (or `0`), only networks that are in use by one or more    containers are returned. - `driver=<driver-name>` Matches a network's driver. - `id=<network-id>` Matches all or part of a network ID. - `label=<key>` or `label=<key>=<value>` of a network label. - `name=<network-name>` Matches all or part of a network name. - `scope=[\"swarm\"|\"global\"|\"local\"]` Filters networks by scope (`swarm`, `global`, or `local`). - `type=[\"custom\"|\"builtin\"]` Filters networks by type. The `custom` keyword returns all user-defined networks. 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/networks" & "?" & query_for_api_call, HttpMethod.HttpGet)
+  let response = await docker.client.request(docker.basepath & "/networks" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Network]](response)
 
 
 proc networkPrune*(docker: Docker | AsyncDocker, filters: string): Future[NetworkPruneResponse] {.multiSync.} =
   ## Delete unused networks
-  let query_for_api_call = encodeQuery([
+  let queryForApiCall = encodeQuery([
     ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `until=<timestamp>` Prune networks created before this timestamp. The `<timestamp>` can be Unix timestamps, date formatted timestamps, or Go duration strings (e.g. `10m`, `1h30m`) computed relative to the daemon machine’s time. - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune networks with (or without, in case `label!=...` is used) the specified labels. 
   ])
 
-  let response = await docker.client.request(docker.basepath & "/networks/prune" & "?" & query_for_api_call, HttpMethod.HttpPost)
+  let response = await docker.client.request(docker.basepath & "/networks/prune" & "?" & queryForApiCall, HttpMethod.HttpPost)
   return await constructResult1[NetworkPruneResponse](response)
 
