@@ -11,8 +11,7 @@ import asyncstreams
 import asyncdispatch
 import net
 import uri
-
-
+import oldDockerClient
 
 
 # something to help with boilerplate
@@ -37,35 +36,12 @@ proc constructResult1*[T](response: Response | AsyncResponse): Future[T] {.multi
   else:
     raise newException(ServerError, await response.body())
   
-
-# macro encode*(dest: untyped, statements: untyped): untyped =
-#   runnableExamples:
-#     # create the destination for the string
-#     var dest: seq[(string, string)] = @[]
-#     # a bunch of data to encode
-#     var a = "hello"
-#     var aOption = some("helloOption")
-#     var aTable = {"hello": "world"}.toTable()
-#     # populate the destination
-#     encode dest:
-#       a
-#       aOption
-#       aTable
-#     # encode the string
-#     echo dest.encodeQuery()
-
-#   result = newStmtList()
-#   for statement in statements:
-#     let exprNode = newStmtList(
-#         newCall(
-#           newIdentNode("addEncode"),
-#           newIdentNode(dest.strVal),
-#           newStrLitNode(statement.strVal),
-#           newIdentNode(statement.strVal)
-#         )
-#       )
-#     result.add(exprNode)
-
+proc addEncode*[T](dest: var seq[(string, string)], key: string, val: T) =
+  when val is Option:
+    if val.isSome:
+      dest.addEncode(key, val)
+  else:
+    dest.add((key, val.toJson()))
 
 # parse hook to convert GO time.time.rfc3339nano to nim time
 proc parseHook*(s: string, i: var int, v: var DateTime) =

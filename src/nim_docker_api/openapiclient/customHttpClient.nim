@@ -28,7 +28,7 @@ type
         socket*: Socket
         headers*: HttpHeaders
         basepath: string
-        responseHeaders*: HttpHeaders
+        # responseHeaders*: HttpHeaders
         sslContext: SslContext
         # body*: string
 
@@ -36,205 +36,12 @@ type
         socket*: AsyncSocket
         headers*: HttpHeaders
         basepath: string
-        responseHeaders*: HttpHeaders
+        # responseHeaders*: HttpHeaders
         sslContext: SslContext
         # body*: string
 
-    HttpError* = object of Exception
+    HttpError* = object of IOError
 
-    Docker = object
-        client: HttpClient
-        basepath: string
-    AsyncDocker = object
-        client: AsyncHttpClient
-        basepath: string
-
-
-proc sendGreeting*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod,
-        uri: string): Future[void] {.multisync.} =
-    let message = $httpMethod & " " & uri & " HTTP/1.1" & "\r\n"
-    when not defined(release):
-        echo "> " & message
-    await client.socket.send(message)
-
-proc sendHeaders*(client: HttpClient | AsyncHttpClient,
-        headers: HttpHeaders = nil): Future[void] {.multisync.} =
-    ## Will send the headers param first otherwise default to the client's headers
-    var tempHeaders = newHttpHeaders()
-
-    if not client.headers.isNil():
-        tempHeaders = client.headers
-    if not headers.isNil():
-        tempHeaders = headers
-    # send the headers
-    for k, v in tempHeaders.pairs():
-        let message = k & ": " & v
-        when not defined(release):
-            echo "> " & message
-        await client.socket.send(message & "\r\n")
-    # finish sending the headers
-    await client.socket.send("\r\n")
-
-proc sendBody*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod, body: string): Future[void] {.multisync.} =
-
-    when not defined(release):
-        echo "> " & body
-    await client.socket.send(body)
-
-proc getChunks*(client: HttpClient | AsyncHttpClient, size: int): Future[
-        string] {.multisync.} =
-    var data = await client.socket.recv(size)
-    # while data.len() < size:
-    #     let chunk = await client.socket.recvLine()
-    #     data.add(chunk)
-    #     echo data.len(),"/", size, ":", cast[seq[char]](chunk)
-    # TODO: FIX THIS data.len should be size but it's not becuase of the \r\n
-    if data.len() != size and size != -1:
-        echo cast[seq[char]](data)
-        raise newException(HttpError, "Chunk size mismatch expected:" & $size &
-                " but got data.len():" & $data.len & "\n data:" & $data)
-    return data
-
-
-proc getData*(client: HttpClient | AsyncHttpClient): Future[
-        string] {.multisync.} =
-    ## Get the data from the socket
-    ## TODO: Handle gzip &  encoding
-    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
-    # Transfer-Encoding: chunked
-    # Transfer-Encoding: compress
-    # Transfer-Encoding: deflate
-    # Transfer-Encoding: gzip
-    # // Several values can be listed, separated by a comma
-    # Transfer-Encoding: gzip, chunked
-    # response types
-    # 1. chunked -> data == \r\n ? read next line as content length, then read that many bytes else chunkSize == 0 end : return the data
-    # 2. content length -> read the content length and read the content
-    # 3. no content -> return empty string
-
-    # example Chunked
-    # < xA
-    # this is size 10
-    # < \r\n
-    # < 0123456789
-    # this is size 10
-    # < \r\n
-    # < 0 This can also be \r\n
-    # ENDED
-    var
-        chunkSize = -1
-        data = ""
-
-    if client.responseHeaders.getOrDefault("Transfer-Encoding").contains("chunked"):
-        var chunkSizeData = (await client.socket.recvLine())
-        when not defined(release):
-            echo "< ", cast[seq[char]](chunkSizeData)
-        if chunkSizeData == "\r\n":
-            return chunkSizeData
-        chunkSize = fromHex[int](chunkSizeData)
-
-
-    if client.responseHeaders.hasKey("Content-Length"):
-        chunkSize = client.responseHeaders.getOrDefault(
-                "Content-Length").parseInt()
-
-    if chunkSize != -1:
-        if chunkSize == 0:
-            return data
-        data = await client.getChunks(chunkSize)
-        echo "< ", cast[seq[char]](data)
-        return data
-
-    data = await client.socket.recvLine()
-
-    return data
-
-
-iterator getData*(client: HttpClient): string =
-    var size = if client.responseHeaders.hasKey(
-            "Content-Length"): client.responseHeaders.getOrDefault(
-            "Content-Length").parseInt() else: -1
-    while true:
-        let data = client.getData()
-        yield data
-        if data == "" or data.len == size:
-            break
-
-iterator getData*(client: AsyncHttpClient): string =
-    var size = if client.responseHeaders.hasKey(
-            "Content-Length"): client.responseHeaders.getOrDefault(
-            "Content-Length").parseInt() else: -1
-    while true:
-        let data = waitFor client.getData()
-        yield data
-        if data == "" or data.len == size:
-            break
-
-proc parseHeaderTupple*(val: string): (string, string) =
-    let parts = val.split(": ")
-    if parts.len != 2:
-        raise newException(HttpError, "Invalid header: " & val)
-    return (parts[0].strip(), parts[1].strip())
-
-proc add*(headers: var HttpHeaders, val: string) =
-    ## add the header to the headers
-    ## Throws error when headers > 10_000
-    let header = parseHeaderTupple(val)
-    if headers.len > headerLimit:
-        raise newException(HttpError, "Too many headers")
-    headers.add(header[0], header[1])
-
-proc parseHttpVersion*(val: string): HttpVersion =
-    ## We only support http/1.1
-    ## TODO: Support http/2.0
-    case val:
-    of "HTTP/1.0":
-        # return HttpVer10
-        raise newException(HttpError, "HTTP/1.0 is not supported")
-    of "HTTP/1.1":
-        return HttpVer11
-    # of "HTTP/2.0":
-    #     return Http2
-    else:
-        raise newException(HttpError, "Invalid HTTP version: " & val)
-
-proc parseWelcomeMessage*(val: string): (HttpVersion, HttpCode, string) =
-    let
-        parts = val.split(" ")
-        version = parts[0].parseHttpVersion()
-        status = HttpCode(parts[1].parseInt())
-        message = parts[2..^1].join(" ")
-
-    return (version, status, message)
-
-
-proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[
-        HttpHeaders] {.multisync.} =
-    var headers = newHttpHeaders()
-    ## parse GET location PROTOCOL
-    ## example
-    ## Deal with welcome message
-    ## GET /containers/myContainer/stats HTTP/1.1
-    ## Then parse headers
-    ## Host: localhost
-    ## User-Agent: curl/7.79.1
-    let welcomeMessage = await client.getData()
-    echo welcomeMessage
-    let (version, status, message) = welcomeMessage.parseWelcomeMessage()
-
-    when not defined(release):
-        echo "HTTP version: " & $version
-        echo "Status: " & $status
-        echo "Message: " & message
-
-    for data in client.getData():
-        when not defined(release):
-            echo "< " & data
-        if data == "\r\n":
-            break
-        headers.add(data)
-
-    return headers
 
 proc finds*(val: string, find: string): seq[int] =
     if find.len == 0:
@@ -343,7 +150,7 @@ proc initAsyncSocket*(client: AsyncHttpClient, uri: Uri): Future[
     return socket
 
 
-proc initClient*(basepath: string, headers: HttpHeaders = nil,
+proc initHttpClient*(basepath: string, headers: HttpHeaders = nil,
         sslContext: SslContext = nil): HttpClient =
 
     var client: HttpClient
@@ -361,8 +168,7 @@ proc initClient*(basepath: string, headers: HttpHeaders = nil,
         if uri.scheme == "https":
             raise newException(HttpError, "this needs to be run with  -d:ssl")
 
-    var socket = client.initSocket(uri)
-    client.socket = socket
+    client.socket = client.initSocket(uri)
 
     client.headers = if headers.isNil: newHttpHeaders() else: headers
 
@@ -370,12 +176,9 @@ proc initClient*(basepath: string, headers: HttpHeaders = nil,
         echo "SETTING HOST NAME:", uri.hostname
         client.headers.add("Host", uri.hostname)
 
-
-
-    client.responseHeaders = newHttpHeaders()
     return client
 
-proc initAsyncClient*(basepath: string, headers: HttpHeaders = nil,
+proc initHttpAsyncClient*(basepath: string, headers: HttpHeaders = nil,
         sslContext: SslContext = nil): Future[AsyncHttpClient] {.async.} =
     var client: AsyncHttpClient
 
@@ -391,8 +194,7 @@ proc initAsyncClient*(basepath: string, headers: HttpHeaders = nil,
         if uri.scheme == "https":
             raise newException(HttpError, "this needs to be run with  -d:ssl")
 
-    var socket = await client.initAsyncSocket(uri)
-    client.socket = socket
+    client.socket = await client.initAsyncSocket(uri)
 
     client.headers = if headers.isNil: newHttpHeaders() else: headers
 
@@ -400,27 +202,205 @@ proc initAsyncClient*(basepath: string, headers: HttpHeaders = nil,
         echo "SETTING HOST NAME:", uri.hostname
         client.headers.add("Host", uri.hostname)
 
+    return client
+
+proc sendGreeting*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod,
+        uri: string): Future[void] {.multisync.} =
+    let message = $httpMethod & " " & uri & " HTTP/1.1" & "\r\n"
+    when defined(verbose):
+        echo "w> " & message
+    await client.socket.send(message)
+
+proc sendHeaders*(client: HttpClient | AsyncHttpClient,
+        headers: HttpHeaders = nil): Future[void] {.multisync.} =
+    ## Will send the headers param first otherwise default to the client's headers
+    var tempHeaders = newHttpHeaders()
+
+    if not client.headers.isNil():
+        tempHeaders = client.headers
+    if not headers.isNil():
+        tempHeaders = headers
+    # send the headers
+    for k, v in tempHeaders.pairs():
+        let message = k & ": " & v
+        when defined(verbose):
+            echo "h> " & message
+        await client.socket.send(message & "\r\n")
+    # finish sending the headers
+    await client.socket.send("\r\n")
+
+proc sendBody*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod,
+        body: string): Future[void] {.multisync.} =
+
+    when defined(verbose):
+        echo "> " & body
+    await client.socket.send(body)
+
+proc getData(socket: Socket | AsyncSocket): Future[string] {.multisync.} =
+    result = await socket.recvLine()
+    when defined(verbose):
+        echo "r< ", cast[seq[char]](result) 
+
+proc getChunks*(client: HttpClient | AsyncHttpClient): Future[
+        string] {.multisync.} =
+    var 
+        chunkSizeData = await client.socket.getData()
+        chunkSize = fromHex[int](chunkSizeData)
+
+    while result.len() < chunkSize:
+        let data = await client.socket.getData()
+        when defined(verbose):
+            echo result.len(),"/", chunkSize, " cd< ", cast[seq[char]](data)
+        result.add(data)
+
+proc getContentLength(client: HttpClient | AsyncHttpClient, size: int): Future[string] {.multisync.} =
+    return await client.socket.recv(size)
+
+proc getData*(
+    client: HttpClient | AsyncHttpClient,
+    responseHeaders: HttpHeaders,
+    parsedHeader: bool = true): Future[string] {.multisync.} =
+    ## Get the data from the socket
+    ## TODO: Handle gzip &  encoding
+    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
+    # Transfer-Encoding: chunked, compress, deflate, gzip
+
+    if parsedHeader:
+        if responseHeaders.getOrDefault("Transfer-Encoding").contains("chunked"):
+            return await client.getChunks()
+
+        if responseHeaders.hasKey("Content-Length"):
+            return await client.getContentLength(responseHeaders.getOrDefault("Content-Length").parseInt())
+
+    return await client.socket.getData()
+
+
+iterator getData*(
+    client: HttpClient,
+    responseHeaders: HttpHeaders,
+    parsedHeader: bool = true): string =
+
+    var size = if responseHeaders.hasKey(
+            "Content-Length"): responseHeaders.getOrDefault(
+            "Content-Length").parseInt() else: -1
+    while true:
+        let data = client.getData(responseHeaders, parsedHeader)
+        if data in ["", "0"] or data.len == size:
+            break
+        yield data
+
+iterator getData*(
+    client: AsyncHttpClient,
+    responseHeaders: HttpHeaders,
+    parsedHeader: bool = true): string =
+    var size = if responseHeaders.hasKey(
+            "Content-Length"): responseHeaders.getOrDefault(
+            "Content-Length").parseInt() else: -1
+    while true:
+        let data = waitFor client.getData(responseHeaders, parsedHeader)
+        if data in ["", "0"] or data.len == size:
+            break
+        yield data
+
+proc parseHeaderTupple*(val: string): (string, string) =
+    let parts = val.split(": ")
+    if parts.len != 2:
+        raise newException(HttpError, "Invalid header: " & val)
+    return (parts[0].strip(), parts[1].strip())
+
+proc add*(headers: var HttpHeaders, val: string) =
+    ## add the header to the headers
+    ## Throws error when headers > 10_000
+    let header = parseHeaderTupple(val)
+    if headers.len > headerLimit:
+        raise newException(HttpError, "Too many headers")
+    headers.add(header[0], header[1])
+
+proc parseHttpVersion*(val: string): HttpVersion =
+    ## We only support http/1.1
+    ## TODO: Support http/2.0
+    case val:
+    of "HTTP/1.0":
+        # return HttpVer10
+        raise newException(HttpError, "HTTP/1.0 is not supported")
+    of "HTTP/1.1":
+        return HttpVer11
+    # of "HTTP/2.0":
+    #     return Http2
+    else:
+        raise newException(HttpError, "Invalid HTTP version: " & val)
+
+
+type
+    WelcomeMessage = object
+        httpVersion: HttpVersion
+        httpCode: HttpCode
+        message: string
+
+proc parseWelcomeMessage*(val: string): WelcomeMessage =
+    echo val
+    let parts = val.split(" ")
+    result.httpVersion = parts[0].parseHttpVersion()
+    result.httpCode = HttpCode(parts[1].parseInt())
+    result.message = parts[2..^1].join(" ")
+
+
+proc getWelcomeMessage(client: HttpClient | AsyncHttpClient, responseHeaders: HttpHeaders = nil): Future[WelcomeMessage] {.multisync.} =
+    let data =  await client.getData(responseHeaders)
+    let welcomeMessage = data.parseWelcomeMessage()
+
+    when defined(verbose):
+        echo "HTTP version: " & $welcomeMessage.httpVersion
+        echo "Status: " & $welcomeMessage.httpCode
+        echo "Message: " & welcomeMessage.message  
+    return welcomeMessage
+
+proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[HttpHeaders] {.multisync.} =
+    var responseHeaders = newHttpHeaders()
+    ## parse GET location PROTOCOL
+    ## example
+    ## Deal with welcome message
+    ## GET /containers/myContainer/stats HTTP/1.1
+    ## Then parse headers
+    ## Host: localhost
+    ## User-Agent: curl/7.79.1
+    
+    for data in client.getData(responseHeaders, false):
+        when defined(verbose):
+            echo "< " & data
+        if data == "\r\n":
+            break
+        responseHeaders.add(data)
+
+    return responseHeaders
+
 # TODO: requests
 # TODO: MultiPart Requests
 # wish that there was no issue with async & iterators in Nim
 # noLentIterators means I have to return the client and let the user modify the client
-proc request*(
+
+type
+    Response = (HttpClient, HttpHeaders)
+    AsyncResponse = (AsyncHttpClient, HttpHeaders)
+
+proc openRequest*(
     client: HttpClient | AsyncHttpClient,
-    httpMethod: HttpMethod = HttpGet,
     uri: Uri | string,
+    httpMethod: HttpMethod = HttpGet,
     body: string = "",
     headers: HttpHeaders = nil
-    ): Future[HttpClient | AsyncHttpClient] {.multisync.} =
+    ): Future[Response | AsyncResponse] {.multisync.} =
     # 1. send greeting
     # 2. add multipart len to headers || add body len to headers
     # 3. send headers
-    # 4. send multipart data || body 
+    # 4. send multipart data || body
     # 5. get response headers
     # 6. return response headers
     # 7. user then can get body outside of this proc
 
     var tempUri: Uri
     var tempClient = client
+
     when uri is string:
         tempUri = uri.parseUri()
     when uri is Uri:
@@ -429,15 +409,21 @@ proc request*(
     var path = tempUri.hostname & tempUri.path
 
     if tempUri.scheme == "unix":
-        path = tempUri.uriGetUnixSocketPath()[1]
+        path = await tempUri.uriGetUnixSocketPath()[1]
 
     await tempClient.sendGreeting(httpMethod, path)
     if body != "":
         tempClient.headers.add("Content-Length", $body.len)
         if not headers.isNil:
             headers.add("Content-Length", $body.len)
+
     await tempClient.sendHeaders(headers)
     await tempClient.sendBody(httpMethod, body)
+
+    var responseHeaders = newHttpHeaders()
+
+    let welcomeMessage = await client.getWelcomeMessage(responseHeaders)
+    responseHeaders = await tempClient.getHeaderResponse()
     
-    tempClient.responseHeaders = await tempClient.getHeaderResponse()
-    return tempClient
+
+    return (tempClient, responseHeaders)

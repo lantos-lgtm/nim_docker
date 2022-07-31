@@ -17,8 +17,8 @@ import tables
 import typetraits
 import uri
 import asyncdispatch
-import streams
 import ../customHttpClient
+import ../newDockerClient
 
 import ../models/model_container_change_response_item
 import ../models/model_container_create_response
@@ -26,237 +26,263 @@ import ../models/model_container_create_request
 import ../models/model_container_inspect_response
 import ../models/model_container_prune_response
 import ../models/model_container_summary
+import ../models/model_container_stats
 import ../models/model_container_top_response
 import ../models/model_container_update_response
 import ../models/model_container_update_request
 import ../models/model_container_wait_response
 
 
-proc containerArchive*(docker: Docker | AsyncDocker, id: string, path: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Get an archive of a filesystem resource in a container
-  let query_for_api_call = encodeQuery([
-    ("path", $path), # Resource in the container’s filesystem to archive.
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, HttpMethod.HttpGet)
+# proc containerArchive*(docker: var Docker | var AsyncDocker, id: string, path: string): Future[Docker | AsyncDocker] {.multiSync.} =
+#   ## Get an archive of a filesystem resource in a container
+#   let query_for_api_call = encodeQuery([
+#     ("path", $path), # Resource in the container’s filesystem to archive.
+#   ])
+#   docker.client = await docker.client.request(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, HttpMethod.HttpGet)
+#   return docker
+
+# proc containerArchiveInfo*(docker: Docker | AsyncDocker, id: string, path: string): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Get information about files in a container
+#   let query_for_api_call = encodeQuery([
+#     ("path", $path), # Resource in the container’s filesystem to archive.
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, HttpMethod.HttpHead)
 
 
-proc containerArchiveInfo*(docker: Docker | AsyncDocker, id: string, path: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Get information about files in a container
-  let query_for_api_call = encodeQuery([
-    ("path", $path), # Resource in the container’s filesystem to archive.
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, HttpMethod.HttpHead)
+# proc containerAttach*(docker: Docker | AsyncDocker, id: string, detachKeys: string, logs: bool, stream: bool, stdin: bool, stdout: bool, stderr: bool): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Attach to a container
+#   let query_for_api_call = encodeQuery([
+#     ("detachKeys", $detachKeys), # Override the key sequence for detaching a container.Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,` or `_`.
+#     ("logs", $logs), # Replay previous logs from the container.  This is useful for attaching to a container that has started and you want to output everything since the container started.  If `stream` is also enabled, once all the previous output has been returned, it will seamlessly transition into streaming current output.
+#     ("stream", $stream), # Stream attached streams from the time the request was made onwards.
+#     ("stdin", $stdin), # Attach to `stdin`
+#     ("stdout", $stdout), # Attach to `stdout`
+#     ("stderr", $stderr), # Attach to `stderr`
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/attach" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
 
-proc containerAttach*(docker: Docker | AsyncDocker, id: string, detachKeys: string, logs: bool, stream: bool, stdin: bool, stdout: bool, stderr: bool): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Attach to a container
-  let query_for_api_call = encodeQuery([
-    ("detachKeys", $detachKeys), # Override the key sequence for detaching a container.Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,` or `_`. 
-    ("logs", $logs), # Replay previous logs from the container.  This is useful for attaching to a container that has started and you want to output everything since the container started.  If `stream` is also enabled, once all the previous output has been returned, it will seamlessly transition into streaming current output. 
-    ("stream", $stream), # Stream attached streams from the time the request was made onwards. 
-    ("stdin", $stdin), # Attach to `stdin`
-    ("stdout", $stdout), # Attach to `stdout`
-    ("stderr", $stderr), # Attach to `stderr`
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/attach" & "?" & query_for_api_call, HttpMethod.HttpPost)
+# proc containerAttachWebsocket*(docker: Docker | AsyncDocker, id: string, detachKeys: string, logs: bool, stream: bool): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Attach to a container via a websocket
+#   let query_for_api_call = encodeQuery([
+#     ("detachKeys", $detachKeys), # Override the key sequence for detaching a container.Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,`, or `_`.
+#     ("logs", $logs), # Return logs
+#     ("stream", $stream), # Return stream
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/attach/ws" & "?" & query_for_api_call, HttpMethod.HttpGet)
 
 
-proc containerAttachWebsocket*(docker: Docker | AsyncDocker, id: string, detachKeys: string, logs: bool, stream: bool): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Attach to a container via a websocket
-  let query_for_api_call = encodeQuery([
-    ("detachKeys", $detachKeys), # Override the key sequence for detaching a container.Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,`, or `_`. 
-    ("logs", $logs), # Return logs
-    ("stream", $stream), # Return stream
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/attach/ws" & "?" & query_for_api_call, HttpMethod.HttpGet)
+# proc containerChanges*(docker: Docker | AsyncDocker, id: string): Future[seq[ContainerChangeResponseItem]] {.multiSync.} =
+#   ## Get changes on a container’s filesystem
+
+#   let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/changes", HttpMethod.HttpGet)
+#   return await constructResult1[seq[ContainerChangeResponseItem]](response)
 
 
-proc containerChanges*(docker: Docker | AsyncDocker, id: string): Future[seq[ContainerChangeResponseItem]] {.multiSync.} =
-  ## Get changes on a container’s filesystem
+# proc containerCreate*(docker: Docker | AsyncDocker, body: ContainerCreateRequest, name: string): Future[ContainerCreateResponse] {.multiSync.} =
+#   ## Create a container
+#   docker.client.headers["Content-Type"] = "application/json"
+#   let query_for_api_call = encodeQuery([
+#     ("name", $name), # Assign the specified name to the container. Must match `/?[a-zA-Z0-9][a-zA-Z0-9_.-]+`.
+#   ])
 
-  let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/changes", HttpMethod.HttpGet)
-  return await constructResult1[seq[ContainerChangeResponseItem]](response)
-
-
-proc containerCreate*(docker: Docker | AsyncDocker, body: ContainerCreateRequest, name: string): Future[ContainerCreateResponse] {.multiSync.} =
-  ## Create a container
-  docker.client.headers["Content-Type"] = "application/json"
-  let query_for_api_call = encodeQuery([
-    ("name", $name), # Assign the specified name to the container. Must match `/?[a-zA-Z0-9][a-zA-Z0-9_.-]+`. 
-  ])
-
-  let response = await docker.client.request(docker.basepath & "/containers/create" & "?" & query_for_api_call, HttpMethod.HttpPost, body.toJson())
-  return await constructResult1[ContainerCreateResponse](response)
+#   let response = await docker.client.request(docker.basepath & "/containers/create" & "?" & query_for_api_call, HttpMethod.HttpPost, body.toJson())
+#   return await constructResult1[ContainerCreateResponse](response)
 
 
-proc containerDelete*(docker: Docker | AsyncDocker, id: string, v: bool, force: bool, link: bool): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Remove a container
-  let query_for_api_call = encodeQuery([
-    ("v", $v), # Remove anonymous volumes associated with the container.
-    ("force", $force), # If the container is running, kill it before removing it.
-    ("link", $link), # Remove the specified link associated with the container.
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}" & "?" & query_for_api_call, HttpMethod.HttpDelete)
+# proc containerDelete*(docker: Docker | AsyncDocker, id: string, v: bool, force: bool, link: bool): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Remove a container
+#   let query_for_api_call = encodeQuery([
+#     ("v", $v), # Remove anonymous volumes associated with the container.
+#     ("force", $force), # If the container is running, kill it before removing it.
+#     ("link", $link), # Remove the specified link associated with the container.
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}" & "?" & query_for_api_call, HttpMethod.HttpDelete)
 
 
-proc containerExport*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Export a container
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/export", HttpMethod.HttpGet)
+# proc containerExport*(docker: Docker | AsyncDocker, id: string): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Export a container
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/export", HttpMethod.HttpGet)
 
 
-proc containerInspect*(docker: Docker | AsyncDocker, id: string, size: bool): Future[ContainerInspectResponse] {.multiSync.} =
-  ## Inspect a container
-  let query_for_api_call = encodeQuery([
-    ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`
-  ])
+# proc containerInspect*(docker: Docker | AsyncDocker, id: string, size: bool): Future[ContainerInspectResponse] {.multiSync.} =
+#   ## Inspect a container
+#   let query_for_api_call = encodeQuery([
+#     ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`
+#   ])
 
-  let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/json" & "?" & query_for_api_call, HttpMethod.HttpGet)
-  return await constructResult1[ContainerInspectResponse](response)
-
-
-proc containerKill*(docker: Docker | AsyncDocker, id: string, signal: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Kill a container
-  let query_for_api_call = encodeQuery([
-    ("signal", $signal), # Signal to send to the container as an integer or string (e.g. `SIGINT`)
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/kill" & "?" & query_for_api_call, HttpMethod.HttpPost)
+#   let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/json" & "?" & query_for_api_call, HttpMethod.HttpGet)
+#   return await constructResult1[ContainerInspectResponse](response)
 
 
-proc containerList*(docker: Docker | AsyncDocker, all: bool = false,
-    limit: Option[int] = none(int), size: bool = false,
-    filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])): Future[seq[ContainerSummary]] {.multiSync.} =
-  var query_for_api_call_array: seq[(string, string)] = @[
-    ("all", $all), # Return all containers. By default, only running containers are shown. 
-    ("limit", $limit), # Return this number of most recently created containers, including non-running ones. 
-    ("size", $size), # Return the size of container as fields `SizeRw` and `SizeRootFs`. 
-    ("filters", $filters), # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`) 
+# proc containerKill*(docker: Docker | AsyncDocker, id: string, signal: string): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Kill a container
+#   let query_for_api_call = encodeQuery([
+#     ("signal", $signal), # Signal to send to the container as an integer or string (e.g. `SIGINT`)
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/kill" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
-  ]
-  let query_for_api_call = query_for_api_call_array.encodeQuery()
-  let response = await docker.client.request(docker.basepath & "/containers/json" & "?" & query_for_api_call, HttpMethod.HttpGet)
-  return await constructResult1[seq[ContainerSummary]](response)
-
-proc containerLogs*(docker: Docker | AsyncDocker, id: string, follow: bool, stdout: bool, stderr: bool, since: int, until: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
-  ## Get container logs
-  
-  var query_for_api_call_array: seq[(string, string)] = @[
-    ("follow", $follow), # Keep connection after returning logs.
-    ("stdout", $stdout), # Return logs from `stdout`
-    ("stderr", $stderr), # Return logs from `stderr`
-    ("since", $since), # Only return logs since this time, as a UNIX timestamp
-    ("until", $until), # Only return logs before this time, as a UNIX timestamp
-    ("timestamps", $timestamps), # Add timestamps to every log line
-    ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
-  ]
-  let query_for_api_call = query_for_api_call_array.encodeQuery()
-
-  let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/logs" & "?" & query_for_api_call, HttpMethod.HttpGet)
-  return await constructResult1[string](response)
+# proc test(a: Docker | AsyncDocker): Future[void] {.multisync.} =
 
 
-proc containerPause*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Pause a container
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/pause", HttpMethod.HttpPost)
+proc containerList*(
+  # docker: Docker | AsyncDocker,
+  docker:  AsyncDocker,
+  all: bool = false,
+  limit: Option[int] = none(int),
+  size: bool = false,
+  filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])
+# ): Future[(Docker, seq[ContainerSummary]) | (AsyncDocker, seq[ContainerSummary])] {.multisync.} =
+): Future[(AsyncHttpClient, seq[ContainerSummary])] {.async.} =
+
+    var query_for_api_call_array: seq[(string, string)] = @[]
+    query_for_api_call_array.addEncode("all",
+        all) # Return all containers. By default, only running containers are shown.
+    query_for_api_call_array.addEncode("limit",
+        limit) # Return this number of most recently created containers, including non-running ones.
+    query_for_api_call_array.addEncode("size",
+        size) # Return the size of container as fields `SizeRw` and `SizeRootFs`.
+    query_for_api_call_array.addEncode("filters",
+        filters) # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`)
+    let query_for_api_call = query_for_api_call_array.encodeQuery()
+    var (tempHttpClient, responseHeaders) = await docker.client.openRequest(
+            docker.basepath &"/containers/json" & "?" & query_for_api_call,
+            HttpMethod.HttpGet)
+
+    let data = await tempHttpClient.getData(responseHeaders)
+    # return (tempDocker, data.fromJson(seq[ContainerSummary]))
+    return data.fromJson(seq[ContainerSummary])
+
+    # return
+
+# proc containerLogs*(docker: Docker | AsyncDocker, id: string, follow: bool, stdout: bool, stderr: bool, since: int, until: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
+#   ## Get container logs
+
+#   var query_for_api_call_array: seq[(string, string)] = @[
+#     ("follow", $follow), # Keep connection after returning logs.
+#     ("stdout", $stdout), # Return logs from `stdout`
+#     ("stderr", $stderr), # Return logs from `stderr`
+#     ("since", $since), # Only return logs since this time, as a UNIX timestamp
+#     ("until", $until), # Only return logs before this time, as a UNIX timestamp
+#     ("timestamps", $timestamps), # Add timestamps to every log line
+#     ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines.
+#   ]
+#   let query_for_api_call = query_for_api_call_array.encodeQuery()
+
+#   let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/logs" & "?" & query_for_api_call, HttpMethod.HttpGet)
+#   return await constructResult1[string](response)
 
 
-proc containerPrune*(docker: Docker | AsyncDocker, filters: string): Future[ContainerPruneResponse] {.multiSync.} =
-  ## Delete stopped containers
-  let query_for_api_call = encodeQuery([
-    ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `until=<timestamp>` Prune containers created before this timestamp. The `<timestamp>` can be Unix timestamps, date formatted timestamps, or Go duration strings (e.g. `10m`, `1h30m`) computed relative to the daemon machine’s time. - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune containers with (or without, in case `label!=...` is used) the specified labels. 
-  ])
-
-  let response = await docker.client.request(docker.basepath & "/containers/prune" & "?" & query_for_api_call, HttpMethod.HttpPost)
-  return await constructResult1[ContainerPruneResponse](response)
+# proc containerPause*(docker: Docker | AsyncDocker, id: string): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Pause a container
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/pause", HttpMethod.HttpPost)
 
 
-proc containerRename*(docker: Docker | AsyncDocker, id: string, name: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Rename a container
-  let query_for_api_call = encodeQuery([
-    ("name", $name), # New name for the container
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/rename" & "?" & query_for_api_call, HttpMethod.HttpPost)
+# proc containerPrune*(docker: Docker | AsyncDocker, filters: string): Future[ContainerPruneResponse] {.multiSync.} =
+#   ## Delete stopped containers
+#   let query_for_api_call = encodeQuery([
+#     ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `until=<timestamp>` Prune containers created before this timestamp. The `<timestamp>` can be Unix timestamps, date formatted timestamps, or Go duration strings (e.g. `10m`, `1h30m`) computed relative to the daemon machine’s time. - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune containers with (or without, in case `label!=...` is used) the specified labels.
+#   ])
+
+#   let response = await docker.client.request(docker.basepath & "/containers/prune" & "?" & query_for_api_call, HttpMethod.HttpPost)
+#   return await constructResult1[ContainerPruneResponse](response)
 
 
-proc containerResize*(docker: Docker | AsyncDocker, id: string, h: int, w: int): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Resize a container TTY
-  let query_for_api_call = encodeQuery([
-    ("h", $h), # Height of the TTY session in characters
-    ("w", $w), # Width of the TTY session in characters
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/resize" & "?" & query_for_api_call, HttpMethod.HttpPost)
+# proc containerRename*(docker: Docker | AsyncDocker, id: string, name: string): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Rename a container
+#   let query_for_api_call = encodeQuery([
+#     ("name", $name), # New name for the container
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/rename" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
 
-proc containerRestart*(docker: Docker | AsyncDocker, id: string, t: int): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Restart a container
-  let query_for_api_call = encodeQuery([
-    ("t", $t), # Number of seconds to wait before killing the container
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/restart" & "?" & query_for_api_call, HttpMethod.HttpPost)
+# proc containerResize*(docker: Docker | AsyncDocker, id: string, h: int, w: int): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Resize a container TTY
+#   let query_for_api_call = encodeQuery([
+#     ("h", $h), # Height of the TTY session in characters
+#     ("w", $w), # Width of the TTY session in characters
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/resize" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
 
-proc containerStart*(docker: Docker | AsyncDocker, id: string, detachKeys: string = "ctrl-z"): Future[Response | AsyncResponse] {.multisync.} =
-  ## Start a container
-  let query_for_api_call = encodeQuery([
-    ("detachKeys", $detachKeys), # Override the key sequence for detaching a container. Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,` or `_`. 
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/start" & "?" & query_for_api_call, HttpMethod.HttpPost)
+# proc containerRestart*(docker: Docker | AsyncDocker, id: string, t: int): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Restart a container
+#   let query_for_api_call = encodeQuery([
+#     ("t", $t), # Number of seconds to wait before killing the container
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/restart" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
 
-iterator containerStats*(docker: Docker | AsyncDocker, id: string, stream: bool, oneShot: bool): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Get container stats based on resource usage
-  let query_for_api_call = encodeQuery([
-    ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect. 
-    ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`. 
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/stats" & "?" & query_for_api_call, HttpMethod.HttpGet)
-
-proc containerStop*(docker: Docker | AsyncDocker, id: string, t: int = 0): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Stop a container
-  let query_for_api_call = encodeQuery([
-    ("t", $t), # Number of seconds to wait before killing the container
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/stop" & "?" & query_for_api_call, HttpMethod.HttpPost)
+# proc containerStart*(docker: Docker | AsyncDocker, id: string, detachKeys: string = "ctrl-z"): Future[Docker| AsyncDocker] {.multisync.} =
+#   ## Start a container
+#   let query_for_api_call = encodeQuery([
+#     ("detachKeys", $detachKeys), # Override the key sequence for detaching a container. Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,` or `_`.
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/start" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
 
-proc containerTop*(docker: Docker | AsyncDocker, id: string, psArgs: string): Future[ContainerTopResponse] {.multiSync.} =
-  ## List processes running inside a container
-  let query_for_api_call = encodeQuery([
-    ("ps_args", $psArgs), # The arguments to pass to `ps`. For example, `aux`
-  ])
+iterator containerStats*(docker: AsyncDocker, id: string, stream: bool,
+    oneShot: bool): ContainerStats =
+    ## Get container stats based on resource usage
+    let query_for_api_call = encodeQuery([
+      ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect.
+        ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`.
+    ])
+    let (client, responseHeader) = waitFor docker.client.openRequest(
+        docker.basepath &
+        fmt"/containers/{id}/stats" & "?" & query_for_api_call,
+        HttpMethod.HttpGet)
 
-  let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/top" & "?" & query_for_api_call, HttpMethod.HttpGet)
-  return await constructResult1[ContainerTopResponse](response)
+    for data in docker.client.getData(responseHeader):
+        yield data.fromJson(ContainerStats)
 
-
-proc containerUnpause*(docker: Docker | AsyncDocker, id: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Unpause a container
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/unpause", HttpMethod.HttpPost)
-
-
-proc containerUpdate*(docker: Docker | AsyncDocker, id: string, update: ContainerUpdateRequest): Future[ContainerUpdateResponse] {.multiSync.} =
-  ## Update a container
-  docker.client.headers["Content-Type"] = "application/json"
-
-  let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/update", HttpMethod.HttpPost, update.toJson())
-  return await constructResult1[ContainerUpdateResponse](response)
-
-
-proc containerWait*(docker: Docker | AsyncDocker, id: string, condition: string): Future[ContainerWaitResponse] {.multiSync.} =
-  ## Wait for a container
-  let query_for_api_call = encodeQuery([
-    ("condition", $condition), # Wait until a container state reaches the given condition.  Defaults to `not-running` if omitted or empty. 
-  ])
-
-  let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/wait" & "?" & query_for_api_call, HttpMethod.HttpPost)
-  return await constructResult1[ContainerWaitResponse](response)
+# proc containerStop*(docker: Docker | AsyncDocker, id: string, t: int = 0): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Stop a container
+#   let query_for_api_call = encodeQuery([
+#     ("t", $t), # Number of seconds to wait before killing the container
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/stop" & "?" & query_for_api_call, HttpMethod.HttpPost)
 
 
-proc putContainerArchive*(docker: Docker | AsyncDocker, id: string, path: string, inputStream: string, noOverwriteDirNonDir: string, copyUIDGID: string): Future[Response | AsyncResponse] {.multiSync.} =
-  ## Extract an archive of files or folders to a directory in a container
-  docker.client.headers["Content-Type"] = "application/json"
-  let query_for_api_call = encodeQuery([
-    ("path", $path), # Path to a directory in the container to extract the archive’s contents into. 
-    ("noOverwriteDirNonDir", $noOverwriteDirNonDir), # If `1`, `true`, or `True` then it will be an error if unpacking the given content would cause an existing directory to be replaced with a non-directory and vice versa. 
-    ("copyUIDGID", $copyUIDGID), # If `1`, `true`, then it will copy UID/GID maps to the dest file or dir 
-  ])
-  return await docker.client.request(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, HttpMethod.HttpPut, inputStream.toJson())
+# proc containerTop*(docker: Docker | AsyncDocker, id: string, psArgs: string): Future[ContainerTopResponse] {.multiSync.} =
+#   ## List processes running inside a container
+#   let query_for_api_call = encodeQuery([
+#     ("ps_args", $psArgs), # The arguments to pass to `ps`. For example, `aux`
+#   ])
+
+#   let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/top" & "?" & query_for_api_call, HttpMethod.HttpGet)
+#   return await constructResult1[ContainerTopResponse](response)
+
+
+# proc containerUnpause*(docker: Docker | AsyncDocker, id: string): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Unpause a container
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/unpause", HttpMethod.HttpPost)
+
+
+# proc containerUpdate*(docker: Docker | AsyncDocker, id: string, update: ContainerUpdateRequest): Future[ContainerUpdateResponse] {.multiSync.} =
+#   ## Update a container
+#   docker.client.headers["Content-Type"] = "application/json"
+
+#   let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/update", HttpMethod.HttpPost, update.toJson())
+#   return await constructResult1[ContainerUpdateResponse](response)
+
+
+# proc containerWait*(docker: Docker | AsyncDocker, id: string, condition: string): Future[ContainerWaitResponse] {.multiSync.} =
+#   ## Wait for a container
+#   let query_for_api_call = encodeQuery([
+#     ("condition", $condition), # Wait until a container state reaches the given condition.  Defaults to `not-running` if omitted or empty.
+#   ])
+
+#   let response = await docker.client.request(docker.basepath & fmt"/containers/{id}/wait" & "?" & query_for_api_call, HttpMethod.HttpPost)
+#   return await constructResult1[ContainerWaitResponse](response)
+
+
+# proc putContainerArchive*(docker: Docker | AsyncDocker, id: string, path: string, inputStream: string, noOverwriteDirNonDir: string, copyUIDGID: string): Future[Docker| AsyncDocker] {.multiSync.} =
+#   ## Extract an archive of files or folders to a directory in a container
+#   docker.client.headers["Content-Type"] = "application/json"
+#   let query_for_api_call = encodeQuery([
+#     ("path", $path), # Path to a directory in the container to extract the archive’s contents into.
+#     ("noOverwriteDirNonDir", $noOverwriteDirNonDir), # If `1`, `true`, or `True` then it will be an error if unpacking the given content would cause an existing directory to be replaced with a non-directory and vice versa.
+#     ("copyUIDGID", $copyUIDGID), # If `1`, `true`, then it will copy UID/GID maps to the dest file or dir
+#   ])
+#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/archive" & "?" & query_for_api_call, HttpMethod.HttpPut, inputStream.toJson())

@@ -11,6 +11,15 @@ type
     client*: AsyncHttpClient
     basepath*: string
 
+type
+    # errors
+    DockerError* = object of CatchableError
+    BadRequest* = object of DockerError
+    NotFound* = object of DockerError
+    Conflict* = object of DockerError
+    NotModified* = object of DockerError
+    ServerError* = object of DockerError
+
 
 let headers = newHttpHeaders({
   "Host": "v1.41",
