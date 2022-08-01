@@ -428,7 +428,8 @@ proc openRequest*(
     if tempUri.scheme == "unix":
         path = tempUri.uriGetUnixSocketPath()[1]
 
-    await tempClient.sendGreeting(httpMethod, path)
+
+    await tempClient.sendGreeting(httpMethod, path & "?" & tempUri.query)
     # send body
     if body != "":
         tempClient.headers.add("Content-Length", $body.len)

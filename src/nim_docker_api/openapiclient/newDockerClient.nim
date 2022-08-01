@@ -23,6 +23,6 @@ proc initDocker*(basepath: string = "unix:///var/run/docker.sock"): Docker =
   result.basepath = basepath
 
 proc initAsyncDocker*(basepath: string = "unix:///var/run/docker.sock"): Future[AsyncDocker] {.async.} =
-  result.client = await initHttpAsyncClient(basepath, headers)
+  result.client = await initAsyncHttpClient(basepath, headers)
   result.client.headers = headers
   result.basepath = basepath
