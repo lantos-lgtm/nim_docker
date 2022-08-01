@@ -221,7 +221,6 @@ proc initAsyncHttpClient*(basepath: string, headers: HttpHeaders = nil,
     client.headers = if headers.isNil: newHttpHeaders() else: headers
 
     if not client.headers.hasKey("Host"):
-        echo "SETTING HOST NAME:", uri.hostname
         client.headers.add("Host", uri.hostname)
 
     return client

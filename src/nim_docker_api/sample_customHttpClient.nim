@@ -1,20 +1,16 @@
 import ./openapiclient/customHttpClient
 import asyncdispatch
 import jsony
-import ./openapiclient/models/model_container_stats
-import ./openapiclient/models/model_container_summary
+import ./openapiclient
 import ./openapiclient/utils
+import ./openapiclient/newDockerClient
 import strformat
 import strutils 
 import tables
+import options
+import print
 
-type
-    Docker* = object
-        client: HttpClient
-        basepath: string
-    AsyncDocker* = object
-        client: AsyncHttpClient
-        basepath: string
+
 
 
 let basepath = "unix:///var/run/docker.sock"
@@ -29,60 +25,63 @@ let headers = newHttpHeaders({
 
 
 
-iterator containerStats*(
-    docker: Docker,
-    id: string,
-    stream: bool,
-    oneShot: bool): ContainerStats =
-
-    ## Get container stats based on resource usage
-    let queryForApiCall = encodeQuery([
-        ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect.
-        ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`.
-    ])
-    var response = docker.client.openRequest( docker.basepath & fmt"/containers/{id}/stats" & "?" & queryForApiCall, HttpMethod.HttpGet)
-    for data in docker.client.recvData(response.response.headers):
-        yield data.fromJson(ContainerStats)
-
-
-
 proc main() =
     var client = initHttpClient(basepath, headers)
     var response = client.openRequest( "/containers/json", HttpMethod.HttpGet)
-
+    
     var cs = newSeq[ContainerSummary]()
     for data in client.recvData(response.response.headers):
         cs = data.fromJson(seq[ContainerSummary])
         echo cs
-    # # var response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
-    # response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
+
+    # var response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
+    # echo "conatiner stats"
+    # response = client.openRequest("/containers/myContainer0Async/stats", HttpMethod.HttpGet)
     # for data in client.recvData(response.response.headers):
     #     echo data.fromJson(ContainerStats)
 
+proc containerOp(id: int) {.async.} =
+    var docker = await initAsyncDocker()
+    var name = "myContainer" & $id
+    var createReq = ContainerCreateRequest(
+        image: "nginx:alpine",
+        hostConfig: HostConfig(
+            portBindings: some({
+                "80/tcp": @[PortBinding(hostIP: "0.0.0.0", hostPort: $(8080 + id))]
+            }.toTable())
+        )
+    )
+    echo createReq.toJson()
+    try:
+        var createRes = await docker.containerCreate(createReq, name)
+    except:
+        echo getCurrentExceptionMsg()
+    
+
+    await docker.containerStart(name)
+
+    echo "conatiner stats"
+    for stat in docker.containerStats(name):
+        echo stat.cpuStats
 
 proc mainAsync() {.async.} =
-    var client = await initAsyncHttpClient(basepath, headers)
-    var response = await client.openRequest( "/containers/json", HttpMethod.HttpGet)
-
-    var cs = newSeq[ContainerSummary]()
-    for data in client.recvData(response.response.headers):
-        cs = data.fromJson(seq[ContainerSummary])
-        # echo cs
-#     var client = await initAsyncClient(basepath, headers)
-#     client = await client.request(HttpMethod.HttpGet, "/containers/myContainer/stats")
-
-#     # get the body response
-#     for i in 0..3:
-#         let data = await client.getData()
-#         if data == "\r\n":
-#             break
-#         echo "< " & data
-
-
+    # for i in 0..10:
+    #     await containerOp(i)
+    await containerOp(1)
 when isMainModule:
-    main()
-    waitFor mainAsync()
-
+    # main()
+    try:
+        waitFor mainAsync()
+    except:
+        let msg = getCurrentExceptionMsg()
+        for line in msg.split("\n"):
+            var line = line.replace("\\", "/")
+            if "/lib/pure/async" in line:
+                continue
+            if "#[" in line:
+                break
+            line.removeSuffix("Iter")
+            echo line
 
     # let headers1 = newHttpHeaders({
     #     "User-Agent": "nimHttp",

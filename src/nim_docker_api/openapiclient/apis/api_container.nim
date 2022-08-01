@@ -79,16 +79,21 @@ import ../models/model_container_wait_response
 #   return await constructResult1[seq[ContainerChangeResponseItem]](response)
 
 
-# proc containerCreate*(docker: Docker | AsyncDocker, body: ContainerCreateRequest, name: string): Future[ContainerCreateResponse] {.multiSync.} =
-#   ## Create a container
-#   docker.client.headers["Content-Type"] = "application/json"
-#   let queryForApiCall = encodeQuery([
-#     ("name", $name), # Assign the specified name to the container. Must match `/?[a-zA-Z0-9][a-zA-Z0-9_.-]+`.
-#   ])
+proc containerCreate*(docker: Docker | AsyncDocker, body: ContainerCreateRequest, name: string): Future[ContainerCreateResponse] {.multiSync.} =
+    ## Create a container
+    docker.client.headers["Content-Type"] = "application/json"
+    let queryForApiCall = encodeQuery([
+        ("name", $name), # Assign the specified name to the container. Must match `/?[a-zA-Z0-9][a-zA-Z0-9_.-]+`.
+    ])
 
-#   let response = await docker.client.request(docker.basepath & "/containers/create" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
-#   return await constructResult1[ContainerCreateResponse](response)
-
+    let response = await docker.client.openRequest(docker.basepath & "/containers/create" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
+    echo docker.basepath & "/containers/create" & "?" & queryForApiCall
+    if response.response.greetingMessage.httpCode == Http200:
+        let data = await response.client.recvData(response.response.headers)
+        return (data).fromJson(ContainerCreateResponse)
+    else:
+        let data = await response.client.recvData(response.response.headers)
+        raise newException(Exception, "Error: " & $response.response.greetingMessage & " " & data)
 
 # proc containerDelete*(docker: Docker | AsyncDocker, id: string, v: bool, force: bool, link: bool): Future[Docker| AsyncDocker] {.multiSync.} =
 #   ## Remove a container
@@ -133,7 +138,7 @@ proc containerList*(
   size: bool = false,
   filters: Option[Table[string, seq[string]]] = none(Table[string, seq[string]])
 # ): Future[(Docker, seq[ContainerSummary]) | (AsyncDocker, seq[ContainerSummary])] {.multisync.} =
-): Future[(AsyncHttpClient, seq[ContainerSummary])] {.async.} =
+): Future[seq[ContainerSummary]] {.async.} =
 
     var queryForApiCall_array: seq[(string, string)] = @[]
     queryForApiCall_array.addEncode("all",
@@ -145,15 +150,11 @@ proc containerList*(
     queryForApiCall_array.addEncode("filters",
         filters) # Filters to process on the container list, encoded as JSON (a `map[string][]string`). For example, `{\"status\": [\"paused\"]}` will only return paused containers.  Available filters:  - `ancestor`=(`<image-name>[:<tag>]`, `<image id>`, or `<image@digest>`) - `before`=(`<container id>` or `<container name>`) - `expose`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `exited=<int>` containers with exit code of `<int>` - `health`=(`starting`|`healthy`|`unhealthy`|`none`) - `id=<ID>` a container's ID - `isolation=`(`default`|`process`|`hyperv`) (Windows daemon only) - `is-task=`(`true`|`false`) - `label=key` or `label=\"key=value\"` of a container label - `name=<name>` a container's name - `network`=(`<network id>` or `<network name>`) - `publish`=(`<port>[/<proto>]`|`<startport-endport>/[<proto>]`) - `since`=(`<container id>` or `<container name>`) - `status=`(`created`|`restarting`|`running`|`removing`|`paused`|`exited`|`dead`) - `volume`=(`<volume name>` or `<mount point destination>`)
     let queryForApiCall = queryForApiCall_array.encodeQuery()
-    var (tempHttpClient, responseHeaders) = await docker.client.openRequest(
-            docker.basepath &"/containers/json" & "?" & queryForApiCall,
+    var response = await docker.client.openRequest(
+            docker.basepath & "/containers/json" & "?" & queryForApiCall,
             HttpMethod.HttpGet)
-
-    let data = await tempHttpClient.getData(responseHeaders)
-    # return (tempDocker, data.fromJson(seq[ContainerSummary]))
+    let data = await docker.client.recvData(response.response.headers)
     return data.fromJson(seq[ContainerSummary])
-
-    # return
 
 # proc containerLogs*(docker: Docker | AsyncDocker, id: string, follow: bool, stdout: bool, stderr: bool, since: int, until: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
 #   ## Get container logs
@@ -213,28 +214,33 @@ proc containerList*(
 #   return await docker.client.request(docker.basepath & fmt"/containers/{id}/restart" & "?" & queryForApiCall, HttpMethod.HttpPost)
 
 
-# proc containerStart*(docker: Docker | AsyncDocker, id: string, detachKeys: string = "ctrl-z"): Future[Docker| AsyncDocker] {.multisync.} =
-#   ## Start a container
-#   let queryForApiCall = encodeQuery([
-#     ("detachKeys", $detachKeys), # Override the key sequence for detaching a container. Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,` or `_`.
-#   ])
-#   return await docker.client.request(docker.basepath & fmt"/containers/{id}/start" & "?" & queryForApiCall, HttpMethod.HttpPost)
+proc containerStart*(docker: Docker | AsyncDocker, id: string, detachKeys: string = "ctrl-z"): Future[void] {.multisync.} =
+  ## Start a container
+  let queryForApiCall = encodeQuery([
+      ("detachKeys", $detachKeys), # Override the key sequence for detaching a container. Format is a single character `[a-Z]` or `ctrl-<value>` where `<value>` is one of: `a-z`, `@`, `^`, `[`, `,` or `_`.
+  ])
+  var response = await docker.client.openRequest(docker.basepath & fmt"/containers/{id}/start" & "?" & queryForApiCall, HttpMethod.HttpPost)
+  let data = await docker.client.recvData(response.response.headers)
+  return
 
+iterator containerStats*(
+    docker: Docker | AsyncDocker,
+    id: string,
+    stream: bool = true,
+    oneShot: bool = false
+  ): ContainerStats =
 
-iterator containerStats*(docker: AsyncDocker, id: string, stream: bool,
-    oneShot: bool): ContainerStats =
-    ## Get container stats based on resource usage
-    let queryForApiCall = encodeQuery([
-      ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect.
-        ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`.
-    ])
-    let (client, responseHeader) = waitFor docker.client.openRequest(
-        docker.basepath &
-        fmt"/containers/{id}/stats" & "?" & queryForApiCall,
-        HttpMethod.HttpGet)
-
-    for data in docker.client.getData(responseHeader):
-        yield data.fromJson(ContainerStats)
+  ## Get container stats based on resource usage
+  let queryForApiCall = encodeQuery([
+    ("stream", $stream), # Stream the output. If false, the stats will be output once and then it will disconnect.
+    ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`.
+  ])
+  var response = when docker is Docker:
+    docker.client.openRequest( docker.basepath & fmt"/containers/{id}/stats" & "?" & queryForApiCall, HttpMethod.HttpGet)
+  else:
+    waitFor docker.client.openRequest( docker.basepath & fmt"/containers/{id}/stats" & "?" & queryForApiCall, HttpMethod.HttpGet)
+  for data in docker.client.recvData(response.response.headers):
+      yield data.fromJson(ContainerStats)
 
 # proc containerStop*(docker: Docker | AsyncDocker, id: string, t: int = 0): Future[Docker| AsyncDocker] {.multiSync.} =
 #   ## Stop a container
