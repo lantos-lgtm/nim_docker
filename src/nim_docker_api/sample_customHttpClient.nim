@@ -41,7 +41,7 @@ iterator containerStats*(
         ("one-shot", $oneShot), # Only get a single stat instead of waiting for 2 cycles. Must be used with `stream=false`.
     ])
     var response = docker.client.openRequest( docker.basepath & fmt"/containers/{id}/stats" & "?" & queryForApiCall, HttpMethod.HttpGet)
-    for data in docker.client.getData(response.response.headers):
+    for data in docker.client.recvData(response.response.headers):
         yield data.fromJson(ContainerStats)
 
 
@@ -50,20 +50,24 @@ proc main() =
     var client = initHttpClient(basepath, headers)
     var response = client.openRequest( "/containers/json", HttpMethod.HttpGet)
 
-
     var cs = newSeq[ContainerSummary]()
-    for data in client.getData(response.response.headers):
+    for data in client.recvData(response.response.headers):
         cs = data.fromJson(seq[ContainerSummary])
 
-    echo cs
-
-    # var response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
-    response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
-    for data in client.getData(response.response.headers):
-        echo data.fromJson(ContainerStats)
+    # # var response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
+    # response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
+    # for data in client.recvData(response.response.headers):
+    #     echo data.fromJson(ContainerStats)
 
 
-# proc mainAsync() {.async.} =
+proc mainAsync() {.async.} =
+    var client = await initAsyncHttpClient(basepath, headers)
+    var response = await client.openRequest( "/containers/json", HttpMethod.HttpGet)
+
+    var cs = newSeq[ContainerSummary]()
+    for data in client.recvData(response.response.headers):
+        cs = data.fromJson(seq[ContainerSummary])
+        
 #     var client = await initAsyncClient(basepath, headers)
 #     client = await client.request(HttpMethod.HttpGet, "/containers/myContainer/stats")
 
@@ -77,7 +81,7 @@ proc main() =
 
 when isMainModule:
     main()
-    # waitFor mainAsync()
+    waitFor mainAsync()
 
 
     # let headers1 = newHttpHeaders({
