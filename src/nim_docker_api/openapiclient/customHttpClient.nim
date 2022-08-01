@@ -31,7 +31,6 @@ type
         # responseHeaders*: HttpHeaders
         sslContext: SslContext
         # body*: string
-
     AsyncHttpClient* = object
         socket*: AsyncSocket
         headers*: HttpHeaders
@@ -41,6 +40,30 @@ type
         # body*: string
 
     HttpError* = object of IOError
+
+    Response* = object
+        client*: HttpClient
+        response*: GreetingResponse
+    AsyncResponse* = object
+        client*: AsyncHttpClient
+        response*: GreetingResponse
+    GreeetingMessage* = object
+        httpVersion*: HttpVersion
+        httpCode*: HttpCode
+        message*: string
+
+    GreetingResponse* = object
+        greetingMessage*: GreeetingMessage
+        headers*: HttpHeaders
+
+    ChunkBody = object
+        chunks: seq[Chunk]
+        lastChunk: Chunk
+        trailerPart: string
+    Chunk = object
+        size: int
+        ext: HttpHeaders
+        data: string
 
 
 proc finds*(val: string, find: string): seq[int] =
@@ -149,7 +172,6 @@ proc initAsyncSocket*(client: AsyncHttpClient, uri: Uri): Future[
 
     return socket
 
-
 proc initHttpClient*(basepath: string, headers: HttpHeaders = nil,
         sslContext: SslContext = nil): HttpClient =
 
@@ -178,7 +200,7 @@ proc initHttpClient*(basepath: string, headers: HttpHeaders = nil,
 
     return client
 
-proc initHttpAsyncClient*(basepath: string, headers: HttpHeaders = nil,
+proc initAsyncHttpClient*(basepath: string, headers: HttpHeaders = nil,
         sslContext: SslContext = nil): Future[AsyncHttpClient] {.async.} =
     var client: AsyncHttpClient
 
@@ -204,15 +226,17 @@ proc initHttpAsyncClient*(basepath: string, headers: HttpHeaders = nil,
 
     return client
 
-proc sendGreeting*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod,
-        uri: string): Future[void] {.multisync.} =
+proc sendGreeting*(
+    client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod, uri: string
+    ): Future[void] {.multisync.} =
     let message = $httpMethod & " " & uri & " HTTP/1.1" & "\r\n"
     when defined(verbose):
         echo "w> " & message
     await client.socket.send(message)
 
-proc sendHeaders*(client: HttpClient | AsyncHttpClient,
-        headers: HttpHeaders = nil): Future[void] {.multisync.} =
+proc sendHeaders*(
+    client: HttpClient | AsyncHttpClient, headers: HttpHeaders = nil
+    ): Future[void] {.multisync.} =
     ## Will send the headers param first otherwise default to the client's headers
     var tempHeaders = newHttpHeaders()
 
@@ -220,13 +244,14 @@ proc sendHeaders*(client: HttpClient | AsyncHttpClient,
         tempHeaders = client.headers
     if not headers.isNil():
         tempHeaders = headers
+
     # send the headers
     for k, v in tempHeaders.pairs():
         let message = k & ": " & v
         when defined(verbose):
             echo "h> " & message
         await client.socket.send(message & "\r\n")
-    # finish sending the headers
+    # finish sending the headers with a blank line
     await client.socket.send("\r\n")
 
 proc sendBody*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod,
@@ -236,27 +261,35 @@ proc sendBody*(client: HttpClient | AsyncHttpClient, httpMethod: HttpMethod,
         echo "> " & body
     await client.socket.send(body)
 
-proc getData(socket: Socket | AsyncSocket): Future[string] {.multisync.} =
+proc recvData(socket: Socket | AsyncSocket): Future[string] {.multisync.} =
     result = await socket.recvLine()
     when defined(verbose):
-        echo "r< ", cast[seq[char]](result) 
+        echo "r< ", cast[seq[char]](result)
 
-proc getChunks*(client: HttpClient | AsyncHttpClient): Future[
-        string] {.multisync.} =
-    var 
-        chunkSizeData = await client.socket.getData()
-        chunkSize = fromHex[int](chunkSizeData)
 
-    while result.len() < chunkSize:
-        let data = await client.socket.getData()
-        when defined(verbose):
-            echo result.len(),"/", chunkSize, " cd< ", cast[seq[char]](data)
-        result.add(data)
+proc recvChunk*(client: HttpClient | AsyncHttpClient): Future[
+        Chunk] {.multisync.} =
+    let chunkHeader = await client.socket.recvData()
+    let chunkHeaderSpacePos = chunkHeader.find(' ')
 
-proc getContentLength(client: HttpClient | AsyncHttpClient, size: int): Future[string] {.multisync.} =
-    return await client.socket.recv(size)
+    if chunkHeaderSpacePos == -1:
+        result.size = fromHex[int](chunkHeader)
+    else:
+        result.size = fromHex[int](chunkHeader[0..chunkHeaderSpacePos])
+        let chunkExtention = chunkHeader[chunkHeaderSpacePos..chunkHeader.high]
+        raise newException(HttpError, "chunk extention not supported: " & chunkExtention)
+    
+    # pass the data of expected size
+    result.data = await client.socket.recv(result.size)
+    when defined(verbose):
+        echo "r< ", cast[seq[char]](result.data)
 
-proc getData*(
+    # then receve the trailing \r\n
+    let expectedNewLine = await client.socket.recvLine()
+    if expectedNewLine != "\r\n":
+        raise newException(HttpError, "expected \\r\\n but got: " & expectedNewLine)
+
+proc recvData*(
     client: HttpClient | AsyncHttpClient,
     responseHeaders: HttpHeaders,
     parsedHeader: bool = true): Future[string] {.multisync.} =
@@ -267,42 +300,37 @@ proc getData*(
 
     if parsedHeader:
         if responseHeaders.getOrDefault("Transfer-Encoding").contains("chunked"):
-            return await client.getChunks()
+            let chunk = await client.recvChunk()
+            result.add(chunk.data)
 
         if responseHeaders.hasKey("Content-Length"):
-            return await client.getContentLength(responseHeaders.getOrDefault("Content-Length").parseInt())
+            let size = responseHeaders.getOrDefault("Content-Length").parseInt()
+            return await client.socket.recv(size)
 
-    return await client.socket.getData()
+    return await client.socket.recvData()
 
 
-iterator getData*(
-    client: HttpClient,
+iterator recvData*(
+    client: AsyncHttpClient | HttpClient,
     responseHeaders: HttpHeaders,
     parsedHeader: bool = true): string =
 
-    var size = if responseHeaders.hasKey(
-            "Content-Length"): responseHeaders.getOrDefault(
-            "Content-Length").parseInt() else: -1
+    var size = if responseHeaders.hasKey("Content-Length"):
+            responseHeaders.getOrDefault("Content-Length").parseInt()
+            else: -1
+
     while true:
-        let data = client.getData(responseHeaders, parsedHeader)
+        
+        let data = when client is HttpClient:
+                client.recvData(responseHeaders, parsedHeader) 
+            else: 
+                waitFor client.recvData(responseHeaders, parsedHeader) 
         if data in ["", "0"] or data.len == size:
             break
         yield data
 
-iterator getData*(
-    client: AsyncHttpClient,
-    responseHeaders: HttpHeaders,
-    parsedHeader: bool = true): string =
-    var size = if responseHeaders.hasKey(
-            "Content-Length"): responseHeaders.getOrDefault(
-            "Content-Length").parseInt() else: -1
-    while true:
-        let data = waitFor client.getData(responseHeaders, parsedHeader)
-        if data in ["", "0"] or data.len == size:
-            break
-        yield data
 
-proc parseHeaderTupple*(val: string): (string, string) =
+proc parseHeaderTuple*(val: string): (string, string) =
     let parts = val.split(": ")
     if parts.len != 2:
         raise newException(HttpError, "Invalid header: " & val)
@@ -311,7 +339,7 @@ proc parseHeaderTupple*(val: string): (string, string) =
 proc add*(headers: var HttpHeaders, val: string) =
     ## add the header to the headers
     ## Throws error when headers > 10_000
-    let header = parseHeaderTupple(val)
+    let header = parseHeaderTuple(val)
     if headers.len > headerLimit:
         raise newException(HttpError, "Too many headers")
     headers.add(header[0], header[1])
@@ -330,18 +358,7 @@ proc parseHttpVersion*(val: string): HttpVersion =
     else:
         raise newException(HttpError, "Invalid HTTP version: " & val)
 
-
-type
-    WelcomeMessage* = object
-        httpVersion*: HttpVersion
-        httpCode*: HttpCode
-        message*: string
-
-    WelcomeResponse* = object
-        welcomeMessage*: WelcomeMessage
-        headers*: HttpHeaders
-
-proc parseWelcomeMessage*(val: string): WelcomeMessage =
+proc parseGreeetingMessage*(val: string): GreeetingMessage =
     echo val
     let parts = val.split(" ")
     result.httpVersion = parts[0].parseHttpVersion()
@@ -349,27 +366,30 @@ proc parseWelcomeMessage*(val: string): WelcomeMessage =
     result.message = parts[2..^1].join(" ")
 
 
-proc getWelcomeMessage(client: HttpClient | AsyncHttpClient, responseHeaders: HttpHeaders = nil): Future[WelcomeMessage] {.multisync.} =
-    let data =  await client.getData(responseHeaders)
-    let welcomeMessage = data.parseWelcomeMessage()
+proc getGreeetingMessage(client: HttpClient | AsyncHttpClient,
+        responseHeaders: HttpHeaders = nil): Future[
+        GreeetingMessage] {.multisync.} =
+    let data = await client.recvData(responseHeaders)
+    let greetingMessage = data.parseGreeetingMessage()
 
     when defined(verbose):
-        echo "HTTP version: " & $welcomeMessage.httpVersion
-        echo "Status: " & $welcomeMessage.httpCode
-        echo "Message: " & welcomeMessage.message  
-    return welcomeMessage
+        echo "HTTP version: " & $greetingMessage.httpVersion
+        echo "Status: " & $greetingMessage.httpCode
+        echo "Message: " & greetingMessage.message
+    return greetingMessage
 
-proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[HttpHeaders] {.multisync.} =
+proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[
+        HttpHeaders] {.multisync.} =
     var responseHeaders = newHttpHeaders()
     ## parse GET location PROTOCOL
     ## example
-    ## Deal with welcome message
+    ## Deal with greeting message
     ## GET /containers/myContainer/stats HTTP/1.1
     ## Then parse headers
     ## Host: localhost
     ## User-Agent: curl/7.79.1
-    
-    for data in client.getData(responseHeaders, false):
+
+    for data in client.recvData(responseHeaders, false):
         when defined(verbose):
             echo "< " & data
         if data == "\r\n":
@@ -383,13 +403,6 @@ proc getHeaderResponse*(client: HttpClient | AsyncHttpClient): Future[HttpHeader
 # wish that there was no issue with async & iterators in Nim
 # noLentIterators means I have to return the client and let the user modify the client
 
-type
-    Response* = object
-        client*: HttpClient
-        response*: WelcomeResponse
-    AsyncResponse* = object
-        client*: AsyncHttpClient
-        response*: WelcomeResponse
 
 proc openRequest*(
     client: HttpClient | AsyncHttpClient,
@@ -415,11 +428,12 @@ proc openRequest*(
         tempUri = uri
 
     var path = tempUri.hostname & tempUri.path
-
+    # fix unix path
     if tempUri.scheme == "unix":
-        path = await tempUri.uriGetUnixSocketPath()[1]
+        path = tempUri.uriGetUnixSocketPath()[1]
 
     await tempClient.sendGreeting(httpMethod, path)
+    # send body
     if body != "":
         tempClient.headers.add("Content-Length", $body.len)
         if not headers.isNil:
@@ -428,13 +442,7 @@ proc openRequest*(
     await tempClient.sendHeaders(headers)
     await tempClient.sendBody(httpMethod, body)
 
-    var responseHeaders = newHttpHeaders()
-    
-    let welcomeMessage = await client.getWelcomeMessage(responseHeaders)
-    responseHeaders = await tempClient.getHeaderResponse()
-    
+    result.response.greetingMessage = await client.getGreeetingMessage(
+            newHttpHeaders())
+    result.response.headers = await tempClient.getHeaderResponse()
     result.client = tempClient
-    result.response = WelcomeResponse(
-        welcomeMessage: welcomeMessage,
-        headers: responseHeaders
-    )
