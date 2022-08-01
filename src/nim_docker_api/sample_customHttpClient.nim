@@ -53,7 +53,7 @@ proc main() =
     var cs = newSeq[ContainerSummary]()
     for data in client.recvData(response.response.headers):
         cs = data.fromJson(seq[ContainerSummary])
-
+        echo cs
     # # var response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
     # response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
     # for data in client.recvData(response.response.headers):
@@ -67,7 +67,7 @@ proc mainAsync() {.async.} =
     var cs = newSeq[ContainerSummary]()
     for data in client.recvData(response.response.headers):
         cs = data.fromJson(seq[ContainerSummary])
-        
+        # echo cs
 #     var client = await initAsyncClient(basepath, headers)
 #     client = await client.request(HttpMethod.HttpGet, "/containers/myContainer/stats")
 

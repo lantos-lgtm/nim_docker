@@ -301,8 +301,7 @@ proc recvData*(
     if parsedHeader:
         if responseHeaders.getOrDefault("Transfer-Encoding").contains("chunked"):
             let chunk = await client.recvChunk()
-            result.add(chunk.data)
-
+            return chunk.data
         if responseHeaders.hasKey("Content-Length"):
             let size = responseHeaders.getOrDefault("Content-Length").parseInt()
             return await client.socket.recv(size)
@@ -314,13 +313,11 @@ iterator recvData*(
     client: AsyncHttpClient | HttpClient,
     responseHeaders: HttpHeaders,
     parsedHeader: bool = true): string =
-
     var size = if responseHeaders.hasKey("Content-Length"):
             responseHeaders.getOrDefault("Content-Length").parseInt()
             else: -1
 
     while true:
-        
         let data = when client is HttpClient:
                 client.recvData(responseHeaders, parsedHeader) 
             else: 
@@ -359,7 +356,6 @@ proc parseHttpVersion*(val: string): HttpVersion =
         raise newException(HttpError, "Invalid HTTP version: " & val)
 
 proc parseGreeetingMessage*(val: string): GreeetingMessage =
-    echo val
     let parts = val.split(" ")
     result.httpVersion = parts[0].parseHttpVersion()
     result.httpCode = HttpCode(parts[1].parseInt())
