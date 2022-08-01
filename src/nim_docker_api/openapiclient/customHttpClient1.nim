@@ -1,6 +1,8 @@
 import
   httpcore,
   net,
+  asyncnet,
+  asyncdispatch,
   streams,
   uri,
   strutils,
@@ -21,11 +23,17 @@ type
     ok: bool
     message: string
 
-  Response* = object
+  Response = object
     httpCode: HttpCode
     headers: HttpHeaders
     stream: Stream
     socket: Socket
+  AsyncResponse = object
+    httpCode: HttpCode
+    headers: HttpHeaders
+    stream: Stream
+    socket: AsyncSocket
+
   Chunk = object
     size: int
     ext: HttpHeaders
@@ -33,21 +41,25 @@ type
 
   HttpError = object of IOError
 
-proc uriGetUnixSocketPath*(uri: Uri): (string, string) =
-  # unix:///var/run/docker.sock/v1.41/containers/json
-  # /var/run/docker.sock
-  echo splitPath(uri.path)
-  # let dotPos = $uri.find(".")
 
+proc initAsyncUnixSocket*(uri: Uri | string): Future[AsyncSocket] {.async.} =
+  var uri = when uri is string: uri.parseUri() else: uri
+  result = newAsyncSocket(
+    Domain.AF_UNIX,
+    SockType.SOCK_STREAM,
+    Protocol.IPPROTO_IP
+  )
+  await result.connectUnix(uri.hostname)
 
 proc initUnixSocket*(uri: Uri | string): Socket =
   var uri = when uri is string: uri.parseUri() else: uri
   result = newSocket(
-      Domain.AF_UNIX,
-      SockType.SOCK_STREAM,
-      Protocol.IPPROTO_IP
+    Domain.AF_UNIX,
+    SockType.SOCK_STREAM,
+    Protocol.IPPROTO_IP
   )
   result.connectUnix(uri.hostname)
+
 
 
 proc initSocket(uri: Uri): Socket =
@@ -59,24 +71,32 @@ proc initSocket(uri: Uri): Socket =
     return initUnixSocket(uri)
   return net.dial(uri.hostname, port)
 
+proc initAsyncSocket(uri: Uri): Future[AsyncSocket] {.async.} =
+  var uri = uri
+  var port = if uri.port != "": Port(uri.port.parseInt()) 
+    elif uri.scheme == "https": Port(443)
+    else: Port(80)
+  if uri.scheme == "unix":
+    return await initAsyncUnixSocket(uri)
+  return await asyncnet.dial(uri.hostname, port)
 
-proc sendGreeting(socket: Socket, httpMethod: HttpMethod, path: string): void =
+proc sendGreeting(socket: Socket | AsyncSocket, httpMethod: HttpMethod, path: string): Future[void] {.multisync.} =
   let message = $httpMethod & " " & path & " HTTP/1.1\r\n"
   when defined(verbose): echo "> ", message
-  socket.send(message)
+  await socket.send(message)
 
-proc sendHeaders(socket: Socket, headers: HttpHeaders): void =
+proc sendHeaders(socket: Socket | AsyncSocket, headers: HttpHeaders): Future[void] {.multisync.} =
   for key, value in headers:
     when defined(verbose): echo "h> ", key, ": ", value
-    socket.send(key & ": " & value & "\r\n")
-  socket.send("\r\n")
+    await socket.send(key & ": " & value & "\r\n")
+  await socket.send("\r\n")
 
-proc sendBody(socket: Socket, body: string): void =
+proc sendBody(socket: Socket | AsyncSocket, body: string): Future[void] {.multisync.} =
   # TODO: chunked encoding
-  socket.send(body)
+  await socket.send(body)
 
-proc recvGreeting(socket: Socket): Greeting =
-  var line = socket.recvLine()
+proc recvGreeting(socket: Socket | AsyncSocket): Future[Greeting] {.multisync.} =
+  var line = await socket.recvLine()
   var parts = line.split(" ")
   if not parts.len >= 3:
     raise newException(HttpError, "Invalid greeting: " & line)
@@ -88,10 +108,10 @@ proc recvGreeting(socket: Socket): Greeting =
   result.ok = result.httpCode == Http200
   result.message = parts[2..parts.high].join(" ")
 
-proc recvHeaders(socket: Socket): HttpHeaders =
+proc recvHeaders(socket: Socket | AsyncSocket): Future[HttpHeaders] {.multisync.} =
   result = newHttpHeaders()
   while true:
-    var line = socket.recvLine()
+    var line = await socket.recvLine()
     when defined(verbose): echo "h< ", line
     if line == "\r\n":
       break
@@ -100,8 +120,8 @@ proc recvHeaders(socket: Socket): HttpHeaders =
       raise newException(HttpError, "Invalid header: " & line)
     result.add(line[0..posSplit-1].strip(), line[posSplit+1..line.high].strip())
 
-proc recvChunk*(socket: Socket): Chunk =
-  let chunkHeader = socket.recvLine()
+proc recvChunk*(socket: Socket | AsyncSocket): Future[Chunk] {.multisync.} =
+  let chunkHeader = await socket.recvLine()
   when defined(verbose): echo "ch< ", cast[seq[char]](chunkHeader)
   let chunkHeaderSpacePos = chunkHeader.find(' ')
 
@@ -113,33 +133,33 @@ proc recvChunk*(socket: Socket): Chunk =
     raise newException(HttpError, "chunk extention not supported: " & chunkExtention)
   
   # pass the data of expected size
-  result.data = socket.recv(result.size)
+  result.data = await socket.recv(result.size)
   when defined(verbose): echo "cd< ", cast[seq[char]](result.data)
 
   # then receve the trailing \r\n
-  let expectedNewLine = socket.recvLine()
+  let expectedNewLine = await socket.recvLine()
   when defined(verbose): echo "enl< ", cast[seq[char]](expectedNewLine)
 
   if expectedNewLine != "\r\n":
     raise newException(HttpError, "expected \\r\\n but got: " & expectedNewLine)
 
-iterator recvData*(response: Response): string =
+iterator recvData*(response: Response | AsyncResponse): string =
   ## iterator over the data of the response
   ## if you want to work with streams use recvStream instead which implements this iterator
   var chunked = response.headers.getOrDefault("Transfer-Encoding").contains("chunked")
   var contentLength = if response.headers.hasKey("Content-Length"): response.headers["Content-Length"].parseInt() else: -1
   if chunked:
-    var chunk = response.socket.recvChunk()
+    var chunk = when response is Response: response.socket.recvChunk() else: waitFor response.socket.recvChunk()
     while chunk.size > 0 and chunk.data != "\r\n":
       yield chunk.data
-      chunk = response.socket.recvChunk()
+      chunk = when response is Response: response.socket.recvChunk() else: waitFor response.socket.recvChunk()
   elif  contentLength > 0: 
-    let line = response.socket.recv(contentLength)
+    let line = when response is Response: response.socket.recv(contentLength) else: waitFor response.socket.recv(contentLength)
     when defined(verbose): echo "cl< ", cast[seq[char]](line)
     yield line
   else:
     while true:
-      let line = response.socket.recvLine()
+      let line = when response is Response: response.socket.recvLine() else: waitFor response.socket.recvLine()
       when defined(verbose): echo "r< ", cast[seq[char]](line)
       if line.len == 0 or line == "\r\n":
         break
@@ -167,11 +187,11 @@ proc fetch*(
     # multiPart: MultiPart
     headers: HttpHeaders = newHttpHeaders(defaultHeaders),
     sslContext: SslContext = nil
-  ): Response =
+  ): Future[Response | AsyncResponse] {.multisync.} =
   # set up the uri
   var uri = when uri is string: parseUri(uri) else: uri
   # set up the socket
-  var socket = initSocket(uri)
+  var socket = when client is Sync: initSocket(uri) else: await initAsyncSocket(uri) 
   when defined(ssl):
     if uri.scheme == "https":
       let sslContext = if sslContext != nil: sslContext else: newContext()
@@ -185,21 +205,21 @@ proc fetch*(
   var path = if uri.path == "": "/" else: uri.path
   path = if uri.query != "": path & "?" & uri.query else: path
 
-  socket.sendGreeting(httpMethod, path)
-  socket.sendHeaders(headers)
-  socket.sendBody(body)
+  await socket.sendGreeting(httpMethod, path)
+  await socket.sendHeaders(headers)
+  await socket.sendBody(body)
 
   
-  let greeting = socket.recvGreeting()
-  let headers = socket.recvHeaders()
+  let greeting = await socket.recvGreeting()
+  let headers = await socket.recvHeaders()
 
   result.httpCode = greeting.httpCode
   result.headers = headers
   result.socket = socket
 
-when isMainModule:
-  var client: Sync
-  var response = client.fetch(HttpGet, "http://info.cern.ch/hypertext/WWW/TheProject.html")
+proc mainAsync() {.async.} =
+  var client: Async
+  var response = await client.fetch(HttpGet, "http://info.cern.ch/hypertext/WWW/TheProject.html")
   for data in response.recvData():
     echo data
 
@@ -209,6 +229,9 @@ when isMainModule:
     "Host": "v1.41",
   })
   let path = Uri(scheme: "unix", hostname: "/var/run/docker.sock", path: "/v1.41/containers/json")
-  response = client.fetch(HttpGet, path, headers= headers)
+  response = await client.fetch(HttpGet, path, headers= headers)
   for data in response.recvData():
     echo data
+
+when isMainModule:
+  waitFor mainAsync()
