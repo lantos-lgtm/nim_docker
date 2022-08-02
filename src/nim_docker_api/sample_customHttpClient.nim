@@ -25,78 +25,66 @@ let headers = newHttpHeaders({
 
 
 
-proc main() =
-    var client = initHttpClient(basepath, headers)
-    var response = client.openRequest( "/containers/json", HttpMethod.HttpGet)
-    
-    var cs = newSeq[ContainerSummary]()
-    for data in client.recvData(response.response.headers):
-        cs = data.fromJson(seq[ContainerSummary])
-        echo cs
 
-    # var response = client.openRequest("/containers/myContainer/stats", HttpMethod.HttpGet)
-    # echo "conatiner stats"
-    # response = client.openRequest("/containers/myContainer0Async/stats", HttpMethod.HttpGet)
-    # for data in client.recvData(response.response.headers):
-    #     echo data.fromJson(ContainerStats)
+proc containerOp(docker: Docker | AsyncDocker, id: int): Future[void] {.multisync.} =
 
-proc containerOp(id: int) {.async.} =
-    var docker = await initAsyncDocker()
     var name = "myContainer" & $id
     var createReq = ContainerCreateRequest(
         image: "nginx:alpine",
+        tty: false,
+        attatchStdin: false,
+        attatchStdout: false,
+        attatchStderr: false,
+        
         hostConfig: HostConfig(
             portBindings: some({
                 "80/tcp": @[PortBinding(hostIP: "0.0.0.0", hostPort: $(8080 + id))]
             }.toTable())
         )
     )
-    echo createReq.toJson()
+
     try:
-        var createRes = await docker.containerCreate(createReq, name)
+        let res = await docker.containerCreate(createReq, name)
     except:
         echo getCurrentExceptionMsg()
-    
 
-    await docker.containerStart(name)
+    # try:
+    #     await docker.containerStop(name)
+    # except:
+    #     echo getCurrentExceptionMsg()
 
-    echo "conatiner stats"
+
+    # try:
+    #     await docker.containerStart(name)
+    # except:
+    #     echo getCurrentExceptionMsg()
+
+
     for stat in docker.containerStats(name):
-        echo stat.cpuStats
+        print stat.cpuStats
+        print stat.precpuStats
+
+proc main() =
+    var docker = initDocker()
+    docker.containerOp(1)
 
 proc mainAsync() {.async.} =
-    # for i in 0..10:
-    #     await containerOp(i)
-    await containerOp(1)
+    var docker = await initAsyncDocker()
+    for i in 0..10:
+        await docker.containerOp(i)
+
 when isMainModule:
-    # main()
-    try:
-        waitFor mainAsync()
-    except:
-        let msg = getCurrentExceptionMsg()
-        for line in msg.split("\n"):
-            var line = line.replace("\\", "/")
-            if "/lib/pure/async" in line:
-                continue
-            if "#[" in line:
-                break
-            line.removeSuffix("Iter")
-            echo line
+    main()
 
-    # let headers1 = newHttpHeaders({
-    #     "User-Agent": "nimHttp",
-    #     "Accept": "*/*",
-    #     "Content-Type": "*/*",
-    # })
-
-    # var client = initClient("http://info.cern.ch", headers1)
-    # client = client.request(HttpGet, "/hypertext/WWW/TheProject.html" )
-    # for data in client.getData():
-    #     echo data
-
-
-    # var client = initClient("https://www.york.ac.uk", headers1)
-    # client = client.request(HttpGet, "/teaching/cws/wws/webpage1.html")
-    # echo client.responseHeaders
-    # for data in client.getData():
-    #     echo data
+    # try:
+    #     waitFor mainAsync()
+    # except:
+    #     let msg = getCurrentExceptionMsg()
+    #     for line in msg.split("\n"):
+    #         var line = line.replace("\\", "/")
+    #         if "/lib/pure/async" in line:
+    #             continue
+    #         if "#[" in line:
+    #             break
+    #         line.removeSuffix("Iter")
+    #         echo line
