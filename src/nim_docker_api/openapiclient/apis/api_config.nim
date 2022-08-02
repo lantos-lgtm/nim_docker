@@ -49,9 +49,9 @@ proc configInspect*(docker: Docker | AsyncDocker, id: string): Future[Config] {.
 
 proc configList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Config]] {.multiSync.} =
   ## List configs
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the configs list.  Available filters:  - `id=<config id>` - `label=<key> or label=<key>=value` - `name=<config name>` - `names=<config name>` 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the configs list.  Available filters:  - `id=<config id>` - `label=<key> or label=<key>=value` - `name=<config name>` - `names=<config name>` 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/configs" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Config]](response)
@@ -60,8 +60,8 @@ proc configList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Conf
 proc configUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: ConfigSpec): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a Config
   docker.client.headers["Content-Type"] = "application/json"
-  let queryForApiCall = encodeQuery([
-    ("version", $version), # The version number of the config object being updated. This is required to avoid conflicting writes. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("version", version) # The version number of the config object being updated. This is required to avoid conflicting writes. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/configs/{id}/update" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
 

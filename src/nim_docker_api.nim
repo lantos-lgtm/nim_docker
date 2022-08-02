@@ -59,7 +59,7 @@ proc mainAsync*() {.async.} =
                         hostIp: "",
                         hostPort: "8080"
                     )
-                ])
+                let queryForApiCall = queryForApiCallarray.encodeQuery()
             }.newTable()[])
         ))
     )

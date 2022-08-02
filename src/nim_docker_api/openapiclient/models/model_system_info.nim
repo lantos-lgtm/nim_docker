@@ -47,7 +47,7 @@ type Isolation* {.pure.} = enum
 
 type SystemInfo* = object
   ## 
-  ID*: string ## Unique identifier of the daemon.  <p><br /></p>  > **Note**: The format of the ID itself is not part of the API, and > should not be considered stable. 
+  id*: string ## Unique identifier of the daemon.  <p><br /></p>  > **Note**: The format of the ID itself is not part of the API, and > should not be considered stable. 
   containers*: int ## Total number of containers on the host.
   containersRunning*: int ## Number of containers with status `\"running\"`. 
   containersPaused*: int ## Number of containers with status `\"paused\"`. 

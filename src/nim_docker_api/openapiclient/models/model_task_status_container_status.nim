@@ -12,5 +12,5 @@
 type TaskStatusContainerStatus* = object
   ## 
   containerID*: string
-  PID*: int
+  pid*: int
   exitCode*: int

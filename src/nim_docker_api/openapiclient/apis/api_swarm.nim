@@ -50,9 +50,9 @@ proc swarmJoin*(docker: Docker | AsyncDocker, body: SwarmJoinRequest): Future[Re
 
 proc swarmLeave*(docker: Docker | AsyncDocker, force: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Leave a swarm
-  let queryForApiCall = encodeQuery([
-    ("force", $force), # Force leave swarm, even if this is the last manager or that it will break the cluster. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("force", force) # Force leave swarm, even if this is the last manager or that it will break the cluster. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & "/swarm/leave" & "?" & queryForApiCall, HttpMethod.HttpPost)
 
 
@@ -71,11 +71,11 @@ proc swarmUnlockkey*(docker: Docker | AsyncDocker): Future[UnlockKeyResponse] {.
 proc swarmUpdate*(docker: Docker | AsyncDocker, version: int64, body: SwarmSpec, rotateWorkerToken: bool, rotateManagerToken: bool, rotateManagerUnlockKey: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a swarm
   docker.client.headers["Content-Type"] = "application/json"
-  let queryForApiCall = encodeQuery([
-    ("version", $version), # The version number of the swarm object being updated. This is required to avoid conflicting writes. 
-    ("rotateWorkerToken", $rotateWorkerToken), # Rotate the worker join token.
-    ("rotateManagerToken", $rotateManagerToken), # Rotate the manager join token.
-    ("rotateManagerUnlockKey", $rotateManagerUnlockKey), # Rotate the manager unlock key.
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("version", version) # The version number of the swarm object being updated. This is required to avoid conflicting writes. 
+  queryForApiCallarray.addEncode("rotateWorkerToken", rotateWorkerToken) # Rotate the worker join token.
+  queryForApiCallarray.addEncode("rotateManagerToken", rotateManagerToken) # Rotate the manager join token.
+  queryForApiCallarray.addEncode("rotateManagerUnlockKey", rotateManagerUnlockKey) # Rotate the manager unlock key.
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & "/swarm/update" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
 

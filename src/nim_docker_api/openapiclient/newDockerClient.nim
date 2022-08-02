@@ -1,5 +1,8 @@
 import ./customHttpClient
-import asyncdispatch
+import 
+  asyncdispatch,
+  net,
+  asyncnet
 
 type
     Docker* = object
@@ -25,3 +28,14 @@ proc initDocker*(baseUri = uri): Docker =
 proc initAsyncDocker*(baseUri = uri): Future[AsyncDocker] {.async.} =
   result.headers = newHttpHeaders(defaultDocketHeaders)
   result.baseUri = baseUri
+
+
+proc raiseHttpError*(res: Response | AsyncResponse): Future[void] {.multisync.} =
+  case res.httpCode:
+  of Http200, Http201, Http202, Http204:
+    discard
+  of Http304:
+    discard
+  else:
+    let message = $res.httpCode & ":" & await res.body()
+    raise newException(HttpError, "HTTP Error: " & message)

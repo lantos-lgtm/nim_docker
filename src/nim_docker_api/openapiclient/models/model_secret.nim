@@ -13,7 +13,7 @@ import model_secret_spec
 
 type Secret* = object
   ## 
-  ID*: string
+  id*: string
   version*: ObjectVersion
   createdAt*: string
   updatedAt*: string

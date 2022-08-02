@@ -47,9 +47,9 @@ proc secretInspect*(docker: Docker | AsyncDocker, id: string): Future[Secret] {.
 
 proc secretList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Secret]] {.multiSync.} =
   ## List secrets
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the secrets list.  Available filters:  - `id=<secret id>` - `label=<key> or label=<key>=value` - `name=<secret name>` - `names=<secret name>` 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the secrets list.  Available filters:  - `id=<secret id>` - `label=<key> or label=<key>=value` - `name=<secret name>` - `names=<secret name>` 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/secrets" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Secret]](response)
@@ -58,8 +58,8 @@ proc secretList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Secr
 proc secretUpdate*(docker: Docker | AsyncDocker, id: string, version: int64, body: SecretSpec): Future[Response | AsyncResponse] {.multiSync.} =
   ## Update a Secret
   docker.client.headers["Content-Type"] = "application/json"
-  let queryForApiCall = encodeQuery([
-    ("version", $version), # The version number of the secret object being updated. This is required to avoid conflicting writes. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("version", version) # The version number of the secret object being updated. This is required to avoid conflicting writes. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/secrets/{id}/update" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
 

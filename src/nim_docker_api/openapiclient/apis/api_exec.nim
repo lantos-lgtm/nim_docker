@@ -41,10 +41,10 @@ proc execInspect*(docker: Docker | AsyncDocker, id: string): Future[ExecInspectR
 
 proc execResize*(docker: Docker | AsyncDocker, id: string, h: int, w: int): Future[Response | AsyncResponse] {.multiSync.} =
   ## Resize an exec instance
-  let queryForApiCall = encodeQuery([
-    ("h", $h), # Height of the TTY session in characters
-    ("w", $w), # Width of the TTY session in characters
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("h", h) # Height of the TTY session in characters
+  queryForApiCallarray.addEncode("w", w) # Width of the TTY session in characters
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/exec/{id}/resize" & "?" & queryForApiCall, HttpMethod.HttpPost)
 
 

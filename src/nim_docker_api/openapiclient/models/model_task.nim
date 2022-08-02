@@ -17,7 +17,7 @@ import model_task_status
 
 type Task* = object
   ## 
-  ID*: string ## The ID of the task.
+  id*: string ## The ID of the task.
   version*: ObjectVersion
   createdAt*: string
   updatedAt*: string

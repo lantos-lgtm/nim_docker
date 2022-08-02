@@ -1316,7 +1316,7 @@ proc select(readfd: Socket, timeout = 500): int =
   var fds = @[readfd.fd]
   result = selectRead(fds, timeout)
 
-proc isClosed(socket: Socket): bool =
+proc isClosed*(socket: Socket): bool =
   socket.fd == osInvalidSocket
 
 proc uniRecv(socket: Socket, buffer: pointer, size, flags: cint): int =

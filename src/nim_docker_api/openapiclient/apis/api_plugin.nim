@@ -25,9 +25,9 @@ import asyncdispatch
 
 proc getPluginPrivileges*(docker: Docker | AsyncDocker, remote: string): Future[seq[PluginPrivilege]] {.multiSync.} =
   ## Get plugin privileges
-  let queryForApiCall = encodeQuery([
-    ("remote", $remote), # The name of the plugin. The `:latest` tag is optional, and is the default if omitted. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("remote", remote) # The name of the plugin. The `:latest` tag is optional, and is the default if omitted. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/plugins/privileges" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[PluginPrivilege]](response)
@@ -36,17 +36,17 @@ proc getPluginPrivileges*(docker: Docker | AsyncDocker, remote: string): Future[
 proc pluginCreate*(docker: Docker | AsyncDocker, name: string, tarContext: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Create a plugin
   docker.client.headers["Content-Type"] = "application/json"
-  let queryForApiCall = encodeQuery([
-    ("name", $name), # The name of the plugin. The `:latest` tag is optional, and is the default if omitted. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("name", name) # The name of the plugin. The `:latest` tag is optional, and is the default if omitted. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & "/plugins/create" & "?" & queryForApiCall, HttpMethod.HttpPost, tarContext.toJson())
 
 
 proc pluginDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Future[Plugin] {.multiSync.} =
   ## Remove a plugin
-  let queryForApiCall = encodeQuery([
-    ("force", $force), # Disable the plugin before removing. This may result in issues if the plugin is in use by a container. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("force", force) # Disable the plugin before removing. This may result in issues if the plugin is in use by a container. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & fmt"/plugins/{name}" & "?" & queryForApiCall, HttpMethod.HttpDelete)
   return await constructResult1[Plugin](response)
@@ -59,9 +59,9 @@ proc pluginDisable*(docker: Docker | AsyncDocker, name: string): Future[Response
 
 proc pluginEnable*(docker: Docker | AsyncDocker, name: string, timeout: int): Future[Response | AsyncResponse] {.multiSync.} =
   ## Enable a plugin
-  let queryForApiCall = encodeQuery([
-    ("timeout", $timeout), # Set the HTTP client timeout (in seconds)
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("timeout", timeout) # Set the HTTP client timeout (in seconds)
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/plugins/{name}/enable" & "?" & queryForApiCall, HttpMethod.HttpPost)
 
 
@@ -74,9 +74,9 @@ proc pluginInspect*(docker: Docker | AsyncDocker, name: string): Future[Plugin] 
 
 proc pluginList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Plugin]] {.multiSync.} =
   ## List plugins
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the plugin list.  Available filters:  - `capability=<capability name>` - `enable=<true>|<false>` 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the plugin list.  Available filters:  - `capability=<capability name>` - `enable=<true>|<false>` 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/plugins" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Plugin]](response)
@@ -86,10 +86,10 @@ proc pluginPull*(docker: Docker | AsyncDocker, remote: string, name: string, xRe
   ## Install a plugin
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
-  let queryForApiCall = encodeQuery([
-    ("remote", $remote), # Remote reference for plugin to install.  The `:latest` tag is optional, and is used as the default if omitted. 
-    ("name", $name), # Local name for the pulled plugin.  The `:latest` tag is optional, and is used as the default if omitted. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("remote", remote) # Remote reference for plugin to install.  The `:latest` tag is optional, and is used as the default if omitted. 
+  queryForApiCallarray.addEncode("name", name) # Local name for the pulled plugin.  The `:latest` tag is optional, and is used as the default if omitted. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & "/plugins/pull" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
 
 
@@ -108,8 +108,8 @@ proc pluginUpgrade*(docker: Docker | AsyncDocker, name: string, remote: string, 
   ## Upgrade a plugin
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
-  let queryForApiCall = encodeQuery([
-    ("remote", $remote), # Remote reference to upgrade to.  The `:latest` tag is optional, and is used as the default if omitted. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("remote", remote) # Remote reference to upgrade to.  The `:latest` tag is optional, and is used as the default if omitted. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/plugins/{name}/upgrade" & "?" & queryForApiCall, HttpMethod.HttpPost,  body.toJson())
 

@@ -12,6 +12,6 @@
 type TaskSpecContainerSpecConfigsInnerFile* = object
   ## File represents a specific target that is backed by a file.  <p><br /><p>  > **Note**: `Configs.File` and `Configs.Runtime` are mutually exclusive 
   name*: string ## Name represents the final filename in the filesystem. 
-  UID*: string ## UID represents the file UID.
-  GID*: string ## GID represents the file GID.
+  uid*: string ## UID represents the file UID.
+  gid*: string ## GID represents the file GID.
   mode*: int ## Mode represents the FileMode of the file.

@@ -11,5 +11,5 @@
 
 type PluginConfigUser* = object
   ## 
-  UID*: int
-  GID*: int
+  uid*: int
+  gid*: int

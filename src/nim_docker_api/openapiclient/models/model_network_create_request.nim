@@ -19,7 +19,7 @@ type NetworkCreateRequest* = object
   internal*: bool ## Restrict external access to the network.
   attachable*: bool ## Globally scoped network is manually attachable by regular containers from workers in swarm mode. 
   ingress*: bool ## Ingress network is the network which provides the routing-mesh in swarm mode. 
-  IPAM*: IPAM
+  ipam*: IPAM
   enableIPv6*: bool ## Enable IPv6 on the network.
   options*: Table[string, string] ## Network specific options to be used by the drivers.
   labels*: Table[string, string] ## User-defined key/value metadata.

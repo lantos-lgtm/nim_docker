@@ -35,9 +35,9 @@ proc volumeCreate*(docker: Docker | AsyncDocker, volumeConfig: VolumeCreateOptio
 
 proc volumeDelete*(docker: Docker | AsyncDocker, name: string, force: bool): Future[Response | AsyncResponse] {.multiSync.} =
   ## Remove a volume
-  let queryForApiCall = encodeQuery([
-    ("force", $force), # Force the removal of the volume
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("force", force) # Force the removal of the volume
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/volumes/{name}" & "?" & queryForApiCall, HttpMethod.HttpDelete)
 
 
@@ -50,9 +50,9 @@ proc volumeInspect*(docker: Docker | AsyncDocker, name: string): Future[Volume] 
 
 proc volumeList*(docker: Docker | AsyncDocker, filters: string): Future[VolumeListResponse] {.multiSync.} =
   ## List volumes
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # JSON encoded value of the filters (a `map[string][]string`) to process on the volumes list. Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), returns all    volumes that are not in use by a container. When set to `false`    (or `0`), only volumes that are in use by one or more    containers are returned. - `driver=<volume-driver-name>` Matches volumes based on their driver. - `label=<key>` or `label=<key>:<value>` Matches volumes based on    the presence of a `label` alone or a `label` and a value. - `name=<volume-name>` Matches all or part of a volume name. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # JSON encoded value of the filters (a `map[string][]string`) to process on the volumes list. Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), returns all    volumes that are not in use by a container. When set to `false`    (or `0`), only volumes that are in use by one or more    containers are returned. - `driver=<volume-driver-name>` Matches volumes based on their driver. - `label=<key>` or `label=<key>:<value>` Matches volumes based on    the presence of a `label` alone or a `label` and a value. - `name=<volume-name>` Matches all or part of a volume name. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/volumes" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[VolumeListResponse](response)
@@ -60,9 +60,9 @@ proc volumeList*(docker: Docker | AsyncDocker, filters: string): Future[VolumeLi
 
 proc volumePrune*(docker: Docker | AsyncDocker, filters: string): Future[VolumePruneResponse] {.multiSync.} =
   ## Delete unused volumes
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune volumes with (or without, in case `label!=...` is used) the specified labels. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # Filters to process on the prune list, encoded as JSON (a `map[string][]string`).  Available filters: - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune volumes with (or without, in case `label!=...` is used) the specified labels. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/volumes/prune" & "?" & queryForApiCall, HttpMethod.HttpPost)
   return await constructResult1[VolumePruneResponse](response)

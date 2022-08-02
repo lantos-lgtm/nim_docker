@@ -42,9 +42,9 @@ proc serviceDelete*(docker: Docker | AsyncDocker, id: string): Future[Response |
 
 proc serviceInspect*(docker: Docker | AsyncDocker, id: string, insertDefaults: bool): Future[Service] {.multiSync.} =
   ## Inspect a service
-  let queryForApiCall = encodeQuery([
-    ("insertDefaults", $insertDefaults), # Fill empty fields with default values.
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("insertDefaults", insertDefaults) # Fill empty fields with default values.
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & fmt"/services/{id}" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[Service](response)
@@ -52,10 +52,10 @@ proc serviceInspect*(docker: Docker | AsyncDocker, id: string, insertDefaults: b
 
 proc serviceList*(docker: Docker | AsyncDocker, filters: string, status: bool): Future[seq[Service]] {.multiSync.} =
   ## List services
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the services list.  Available filters:  - `id=<service id>` - `label=<service label>` - `mode=[\"replicated\"|\"global\"]` - `name=<service name>` 
-    ("status", $status), # Include service status, with count of running and desired tasks. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the services list.  Available filters:  - `id=<service id>` - `label=<service label>` - `mode=[\"replicated\"|\"global\"]` - `name=<service name>` 
+  queryForApiCallarray.addEncode("status", status) # Include service status, with count of running and desired tasks. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/services" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Service]](response)
@@ -63,15 +63,15 @@ proc serviceList*(docker: Docker | AsyncDocker, filters: string, status: bool): 
 
 proc serviceLogs*(docker: Docker | AsyncDocker, id: string, details: bool, follow: bool, stdout: bool, stderr: bool, since: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
   ## Get service logs
-  let queryForApiCall = encodeQuery([
-    ("details", $details), # Show service context and extra details provided to logs.
-    ("follow", $follow), # Keep connection after returning logs.
-    ("stdout", $stdout), # Return logs from `stdout`
-    ("stderr", $stderr), # Return logs from `stderr`
-    ("since", $since), # Only return logs since this time, as a UNIX timestamp
-    ("timestamps", $timestamps), # Add timestamps to every log line
-    ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("details", details) # Show service context and extra details provided to logs.
+  queryForApiCallarray.addEncode("follow", follow) # Keep connection after returning logs.
+  queryForApiCallarray.addEncode("stdout", stdout) # Return logs from `stdout`
+  queryForApiCallarray.addEncode("stderr", stderr) # Return logs from `stderr`
+  queryForApiCallarray.addEncode("since", since) # Only return logs since this time, as a UNIX timestamp
+  queryForApiCallarray.addEncode("timestamps", timestamps) # Add timestamps to every log line
+  queryForApiCallarray.addEncode("tail", tail) # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & fmt"/services/{id}/logs" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[string](response)
@@ -81,11 +81,11 @@ proc serviceUpdate*(docker: Docker | AsyncDocker, id: string, version: int, body
   ## Update a service
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
-  let queryForApiCall = encodeQuery([
-    ("version", $version), # The version number of the service object being updated. This is required to avoid conflicting writes. This version number should be the value as currently set on the service *before* the update. You can find the current version by calling `GET /services/{id}` 
-    ("registryAuthFrom", $registryAuthFrom), # If the `X-Registry-Auth` header is not specified, this parameter indicates where to find registry authorization credentials. 
-    ("rollback", $rollback), # Set to this parameter to `previous` to cause a server-side rollback to the previous service spec. The supplied spec will be ignored in this case. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("version", version) # The version number of the service object being updated. This is required to avoid conflicting writes. This version number should be the value as currently set on the service *before* the update. You can find the current version by calling `GET /services/{id}` 
+  queryForApiCallarray.addEncode("registryAuthFrom", registryAuthFrom) # If the `X-Registry-Auth` header is not specified, this parameter indicates where to find registry authorization credentials. 
+  queryForApiCallarray.addEncode("rollback", rollback) # Set to this parameter to `previous` to cause a server-side rollback to the previous service spec. The supplied spec will be ignored in this case. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & fmt"/services/{id}/update" & "?" & queryForApiCall, HttpMethod.HttpPost, body.toJson())
   return await constructResult1[ServiceUpdateResponse](response)

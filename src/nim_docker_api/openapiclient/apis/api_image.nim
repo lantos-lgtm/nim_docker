@@ -33,11 +33,11 @@ import asyncdispatch
 
 proc buildPrune*(docker: Docker | AsyncDocker, keepStorage: int64, all: bool, filters: string): Future[BuildPruneResponse] {.multiSync.} =
   ## Delete builder cache
-  let queryForApiCall = encodeQuery([
-    ("keep-storage", $keepStorage), # Amount of disk space in bytes to keep for cache
-    ("all", $all), # Remove all types of build cache
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the list of build cache objects.  Available filters:  - `until=<duration>`: duration relative to daemon's time, during which build cache was not used, in Go's duration format (e.g., '24h') - `id=<id>` - `parent=<id>` - `type=<string>` - `description=<string>` - `inuse` - `shared` - `private` 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("keep-storage", keepStorage) # Amount of disk space in bytes to keep for cache
+  queryForApiCallarray.addEncode("all", all) # Remove all types of build cache
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the list of build cache objects.  Available filters:  - `until=<duration>`: duration relative to daemon's time, during which build cache was not used, in Go's duration format (e.g., '24h') - `id=<id>` - `parent=<id>` - `type=<string>` - `description=<string>` - `inuse` - `shared` - `private` 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/build/prune" & "?" & queryForApiCall, HttpMethod.HttpPost)
   return await constructResult1[BuildPruneResponse](response)
@@ -48,47 +48,48 @@ proc imageBuild*(docker: Docker | AsyncDocker, dockerfile: string, t: string, ex
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["Content-type"] = contentType
   docker.client.headers["X-Registry-Config"] = xRegistryConfig
-  let queryForApiCall = encodeQuery([
-    ("dockerfile", $dockerfile), # Path within the build context to the `Dockerfile`. This is ignored if `remote` is specified and points to an external `Dockerfile`.
-    ("t", $t), # A name and optional tag to apply to the image in the `name:tag` format. If you omit the tag the default `latest` value is assumed. You can provide several `t` parameters.
-    ("extrahosts", $extrahosts), # Extra hosts to add to /etc/hosts
-    ("remote", $remote), # A Git repository URI or HTTP/HTTPS context URI. If the URI points to a single text file, the file’s contents are placed into a file called `Dockerfile` and the image is built from that file. If the URI points to a tarball, the file is downloaded by the daemon and the contents therein used as the context for the build. If the URI points to a tarball and the `dockerfile` parameter is also specified, there must be a file with the corresponding path inside the tarball.
-    ("q", $q), # Suppress verbose build output.
-    ("nocache", $nocache), # Do not use the cache when building the image.
-    ("cachefrom", $cachefrom), # JSON array of images used for build cache resolution.
-    ("pull", $pull), # Attempt to pull the image even if an older image exists locally.
-    ("rm", $rm), # Remove intermediate containers after a successful build.
-    ("forcerm", $forcerm), # Always remove intermediate containers, even upon failure.
-    ("memory", $memory), # Set memory limit for build.
-    ("memswap", $memswap), # Total memory (memory + swap). Set as `-1` to disable swap.
-    ("cpushares", $cpushares), # CPU shares (relative weight).
-    ("cpusetcpus", $cpusetcpus), # CPUs in which to allow execution (e.g., `0-3`, `0,1`).
-    ("cpuperiod", $cpuperiod), # The length of a CPU period in microseconds.
-    ("cpuquota", $cpuquota), # Microseconds of CPU time that the container can get in a CPU period.
-    ("buildargs", $buildargs), # JSON map of string pairs for build-time variables. Users pass these values at build-time. Docker uses the buildargs as the environment context for commands run via the `Dockerfile` RUN instruction, or for variable expansion in other `Dockerfile` instructions. This is not meant for passing secret values.  For example, the build arg `FOO=bar` would become `{\"FOO\":\"bar\"}` in JSON. This would result in the query parameter `buildargs={\"FOO\":\"bar\"}`. Note that `{\"FOO\":\"bar\"}` should be URI component encoded.  [Read more about the buildargs instruction.](/engine/reference/builder/#arg) 
-    ("shmsize", $shmsize), # Size of `/dev/shm` in bytes. The size must be greater than 0. If omitted the system uses 64MB.
-    ("squash", $squash), # Squash the resulting images layers into a single layer. *(Experimental release only.)*
-    ("labels", $labels), # Arbitrary key/value labels to set on the image, as a JSON map of string pairs.
-    ("networkmode", $networkmode), # Sets the networking mode for the run commands during build. Supported standard values are: `bridge`, `host`, `none`, and `container:<name|id>`. Any other value is taken as a custom network's name or ID to which this container should connect to. 
-    ("platform", $platform), # Platform in the format os[/arch[/variant]]
-    ("target", $target), # Target build stage
-    ("outputs", $outputs), # BuildKit output configuration
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+
+  queryForApiCallarray.addEncode("dockerfile", dockerfile) # Path within the build context to the `Dockerfile`. This is ignored if `remote` is specified and points to an external `Dockerfile`.
+  queryForApiCallarray.addEncode("t", t) # A name and optional tag to apply to the image in the `name:tag` format. If you omit the tag the default `latest` value is assumed. You can provide several `t` parameters.
+  queryForApiCallarray.addEncode("extrahosts", extrahosts) # Extra hosts to add to /etc/hosts
+  queryForApiCallarray.addEncode("remote", remote) # A Git repository URI or HTTP/HTTPS context URI. If the URI points to a single text file, the file’s contents are placed into a file called `Dockerfile` and the image is built from that file. If the URI points to a tarball, the file is downloaded by the daemon and the contents therein used as the context for the build. If the URI points to a tarball and the `dockerfile` parameter is also specified, there must be a file with the corresponding path inside the tarball.
+  queryForApiCallarray.addEncode("q", q) # Suppress verbose build output.
+  queryForApiCallarray.addEncode("nocache", nocache) # Do not use the cache when building the image.
+  queryForApiCallarray.addEncode("cachefrom", cachefrom) # JSON array of images used for build cache resolution.
+  queryForApiCallarray.addEncode("pull", pull) # Attempt to pull the image even if an older image exists locally.
+  queryForApiCallarray.addEncode("rm", rm) # Remove intermediate containers after a successful build.
+  queryForApiCallarray.addEncode("forcerm", forcerm) # Always remove intermediate containers, even upon failure.
+  queryForApiCallarray.addEncode("memory", memory) # Set memory limit for build.
+  queryForApiCallarray.addEncode("memswap", memswap) # Total memory (memory + swap). Set as `-1` to disable swap.
+  queryForApiCallarray.addEncode("cpushares", cpushares) # CPU shares (relative weight).
+  queryForApiCallarray.addEncode("cpusetcpus", cpusetcpus) # CPUs in which to allow execution (e.g., `0-3`, `0,1`).
+  queryForApiCallarray.addEncode("cpuperiod", cpuperiod) # The length of a CPU period in microseconds.
+  queryForApiCallarray.addEncode("cpuquota", cpuquota) # Microseconds of CPU time that the container can get in a CPU period.
+  queryForApiCallarray.addEncode("buildargs", buildargs) # JSON map of string pairs for build-time variables. Users pass these values at build-time. Docker uses the buildargs as the environment context for commands run via the `Dockerfile` RUN instruction, or for variable expansion in other `Dockerfile` instructions. This is not meant for passing secret values.  For example, the build arg `FOO=bar` would become `{\"FOO\":\"bar\"}` in JSON. This would result in the query parameter `buildargs={\"FOO\":\"bar\"}`. Note that `{\"FOO\":\"bar\"}` should be URI component encoded.  [Read more about the buildargs instruction.](/engine/reference/builder/#arg) 
+  queryForApiCallarray.addEncode("shmsize", shmsize) # Size of `/dev/shm` in bytes. The size must be greater than 0. If omitted the system uses 64MB.
+  queryForApiCallarray.addEncode("squash", squash) # Squash the resulting images layers into a single layer. *(Experimental release only.)*
+  queryForApiCallarray.addEncode("labels", labels) # Arbitrary key/value labels to set on the image, as a JSON map of string pairs.
+  queryForApiCallarray.addEncode("networkmode", networkmode) # Sets the networking mode for the run commands during build. Supported standard values are: `bridge`, `host`, `none`, and `container:<name|id>`. Any other value is taken as a custom network's name or ID to which this container should connect to. 
+  queryForApiCallarray.addEncode("platform", platform) # Platform in the format os[/arch[/variant]]
+  queryForApiCallarray.addEncode("target", target) # Target build stage
+  queryForApiCallarray.addEncode("outputs", outputs) # BuildKit output configuration
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & "/build" & "?" & queryForApiCall, HttpMethod.HttpPost, inputStream.toJson())
 
 
 proc imageCommit*(docker: Docker | AsyncDocker, container: string, repo: string, tag: string, comment: string, author: string, pause: bool, changes: string, containerConfig: ContainerConfig): Future[IdResponse] {.multiSync.} =
   ## Create a new image from a container
   docker.client.headers["Content-Type"] = "application/json"
-  let queryForApiCall = encodeQuery([
-    ("container", $container), # The ID or name of the container to commit
-    ("repo", $repo), # Repository name for the created image
-    ("tag", $tag), # Tag name for the create image
-    ("comment", $comment), # Commit message
-    ("author", $author), # Author of the image (e.g., `John Hannibal Smith <hannibal@a-team.com>`)
-    ("pause", $pause), # Whether to pause the container before committing
-    ("changes", $changes), # `Dockerfile` instructions to apply while committing
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("container", container) # The ID or name of the container to commit
+  queryForApiCallarray.addEncode("repo", repo) # Repository name for the created image
+  queryForApiCallarray.addEncode("tag", tag) # Tag name for the create image
+  queryForApiCallarray.addEncode("comment", comment) # Commit message
+  queryForApiCallarray.addEncode("author", author) # Author of the image (e.g., `John Hannibal Smith <hannibal@a-team.com>`)
+  queryForApiCallarray.addEncode("pause", pause) # Whether to pause the container before committing
+  queryForApiCallarray.addEncode("changes", changes) # `Dockerfile` instructions to apply while committing
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/commit" & "?" & queryForApiCall, HttpMethod.HttpPost, containerConfig.toJson())
   return await constructResult1[IdResponse](response)
@@ -98,24 +99,25 @@ proc imageCreate*(docker: Docker | AsyncDocker, fromImage: string, fromSrc: stri
   ## Create an image
   docker.client.headers["Content-Type"] = "application/json"
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
-  let queryForApiCall = encodeQuery([
-    ("fromImage", $fromImage), # Name of the image to pull. The name may include a tag or digest. This parameter may only be used when pulling an image. The pull is cancelled if the HTTP connection is closed.
-    ("fromSrc", $fromSrc), # Source to import. The value may be a URL from which the image can be retrieved or `-` to read the image from the request body. This parameter may only be used when importing an image.
-    ("repo", $repo), # Repository name given to an image when it is imported. The repo may include a tag. This parameter may only be used when importing an image.
-    ("tag", $tag), # Tag or digest. If empty when pulling an image, this causes all tags for the given image to be pulled.
-    ("message", $message), # Set commit message for imported image.
-    ("changes", $changes.join(",")), # Apply `Dockerfile` instructions to the image that is created, for example: `changes=ENV DEBUG=true`. Note that `ENV DEBUG=true` should be URI component encoded.  Supported `Dockerfile` instructions: `CMD`|`ENTRYPOINT`|`ENV`|`EXPOSE`|`ONBUILD`|`USER`|`VOLUME`|`WORKDIR` 
-    ("platform", $platform), # Platform in the format os[/arch[/variant]]
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("fromImage", fromImage) # Name of the image to pull. The name may include a tag or digest. This parameter may only be used when pulling an image. The pull is cancelled if the HTTP connection is closed.
+  queryForApiCallarray.addEncode("fromSrc", fromSrc) # Source to import. The value may be a URL from which the image can be retrieved or `-` to read the image from the request body. This parameter may only be used when importing an image.
+  queryForApiCallarray.addEncode("repo", repo) # Repository name given to an image when it is imported. The repo may include a tag. This parameter may only be used when importing an image.
+  queryForApiCallarray.addEncode("tag", tag) # Tag or digest. If empty when pulling an image, this causes all tags for the given image to be pulled.
+  queryForApiCallarray.addEncode("message", message) # Set commit message for imported image.
+  queryForApiCallarray.addEncode("changes", $changes.join(",")) # Apply `Dockerfile` instructions to the image that is created, for example: `changes=ENV DEBUG=true`. Note that `ENV DEBUG=true` should be URI component encoded.  Supported `Dockerfile` instructions: `CMD`|`ENTRYPOINT`|`ENV`|`EXPOSE`|`ONBUILD`|`USER`|`VOLUME`|`WORKDIR` 
+  queryForApiCallarray.addEncode("platform", platform) # Platform in the format os[/arch[/variant]]
+  
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & "/images/create" & "?" & queryForApiCall, HttpMethod.HttpPost, inputImage.toJson())
 
 
 proc imageDelete*(docker: Docker | AsyncDocker, name: string, force: bool, noprune: bool): Future[seq[ImageDeleteResponseItem]] {.multiSync.} =
   ## Remove an image
-  let queryForApiCall = encodeQuery([
-    ("force", $force), # Remove the image even if it is being used by stopped containers or has other tags
-    ("noprune", $noprune), # Do not delete untagged parent images
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("force", force) # Remove the image even if it is being used by stopped containers or has other tags
+  queryForApiCallarray.addEncode("noprune", noprune) # Do not delete untagged parent images
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & fmt"/images/{name}" & "?" & queryForApiCall, HttpMethod.HttpDelete)
   return await constructResult1[seq[ImageDeleteResponseItem]](response)
@@ -130,9 +132,9 @@ proc imageGet*(docker: Docker | AsyncDocker, name: string): Future[string] {.mul
 
 proc imageGetAll*(docker: Docker | AsyncDocker, names: seq[string]): Future[string] {.multiSync.} =
   ## Export several images
-  let queryForApiCall = encodeQuery([
-    ("names", $names.join(",")), # Image names to filter by
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("names", $names.join(",")) # Image names to filter by
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/images/get" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[string](response)
@@ -154,11 +156,11 @@ proc imageInspect*(docker: Docker | AsyncDocker, name: string): Future[ImageInsp
 
 proc imageList*(docker: Docker | AsyncDocker, all: bool, filters: string, digests: bool): Future[seq[ImageSummary]] {.multiSync.} =
   ## List Images
-  let queryForApiCall = encodeQuery([
-    ("all", $all), # Show all images. Only images from a final layer (no children) are shown by default.
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the images list.  Available filters:  - `before`=(`<image-name>[:<tag>]`,  `<image id>` or `<image@digest>`) - `dangling=true` - `label=key` or `label=\"key=value\"` of an image label - `reference`=(`<image-name>[:<tag>]`) - `since`=(`<image-name>[:<tag>]`,  `<image id>` or `<image@digest>`) 
-    ("digests", $digests), # Show digest information as a `RepoDigests` field on each image.
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("all", all) # Show all images. Only images from a final layer (no children) are shown by default.
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the images list.  Available filters:  - `before`=(`<image-name>[:<tag>]`,  `<image id>` or `<image@digest>`) - `dangling=true` - `label=key` or `label=\"key=value\"` of an image label - `reference`=(`<image-name>[:<tag>]`) - `since`=(`<image-name>[:<tag>]`,  `<image id>` or `<image@digest>`) 
+  queryForApiCallarray.addEncode("digests", digests) # Show digest information as a `RepoDigests` field on each image.
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/images/json" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[ImageSummary]](response)
@@ -167,17 +169,17 @@ proc imageList*(docker: Docker | AsyncDocker, all: bool, filters: string, digest
 proc imageLoad*(docker: Docker | AsyncDocker, quiet: bool, imagesTarball: string): Future[Response | AsyncResponse] {.multiSync.} =
   # images
   docker.client.headers["Content-Type"] = "application/json"
-  let queryForApiCall = encodeQuery([
-    ("quiet", $quiet), # Suppress progress details during load.
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("quiet", quiet) # Suppress progress details during load.
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & "/images/load" & "?" & queryForApiCall, HttpMethod.HttpPost, imagesTarball.toJson())
 
 
 proc imagePrune*(docker: Docker | AsyncDocker, filters: string): Future[ImagePruneResponse] {.multiSync.} =
   ## Delete unused images
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # Filters to process on the prune list, encoded as JSON (a `map[string][]string`). Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), prune only    unused *and* untagged images. When set to `false`    (or `0`), all unused images are pruned. - `until=<string>` Prune images created before this timestamp. The `<timestamp>` can be Unix timestamps, date formatted timestamps, or Go duration strings (e.g. `10m`, `1h30m`) computed relative to the daemon machine’s time. - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune images with (or without, in case `label!=...` is used) the specified labels. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # Filters to process on the prune list, encoded as JSON (a `map[string][]string`). Available filters:  - `dangling=<boolean>` When set to `true` (or `1`), prune only    unused *and* untagged images. When set to `false`    (or `0`), all unused images are pruned. - `until=<string>` Prune images created before this timestamp. The `<timestamp>` can be Unix timestamps, date formatted timestamps, or Go duration strings (e.g. `10m`, `1h30m`) computed relative to the daemon machine’s time. - `label` (`label=<key>`, `label=<key>=<value>`, `label!=<key>`, or `label!=<key>=<value>`) Prune images with (or without, in case `label!=...` is used) the specified labels. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/images/prune" & "?" & queryForApiCall, HttpMethod.HttpPost)
   return await constructResult1[ImagePruneResponse](response)
@@ -186,19 +188,19 @@ proc imagePrune*(docker: Docker | AsyncDocker, filters: string): Future[ImagePru
 proc imagePush*(docker: Docker | AsyncDocker, name: string, xRegistryAuth: string, tag: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Push an image
   docker.client.headers["X-Registry-Auth"] = xRegistryAuth
-  let queryForApiCall = encodeQuery([
-    ("tag", $tag), # The tag to associate with the image on the registry.
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("tag", tag) # The tag to associate with the image on the registry.
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/images/{name}/push" & "?" & queryForApiCall, HttpMethod.HttpPost)
 
 
 proc imageSearch*(docker: Docker | AsyncDocker, term: string, limit: int, filters: string): Future[seq[ImageSearchResponseItem]] {.multiSync.} =
   ## Search images
-  let queryForApiCall = encodeQuery([
-    ("term", $term), # Term to search
-    ("limit", $limit), # Maximum number of results to return
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the images list. Available filters:  - `is-automated=(true|false)` - `is-official=(true|false)` - `stars=<number>` Matches images that has at least 'number' stars. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("term", term) # Term to search
+  queryForApiCallarray.addEncode("limit", limit) # Maximum number of results to return
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the images list. Available filters:  - `is-automated=(true|false)` - `is-official=(true|false)` - `stars=<number>` Matches images that has at least 'number' stars. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/images/search" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[ImageSearchResponseItem]](response)
@@ -206,9 +208,9 @@ proc imageSearch*(docker: Docker | AsyncDocker, term: string, limit: int, filter
 
 proc imageTag*(docker: Docker | AsyncDocker, name: string, repo: string, tag: string): Future[Response | AsyncResponse] {.multiSync.} =
   ## Tag an image
-  let queryForApiCall = encodeQuery([
-    ("repo", $repo), # The repository to tag in. For example, `someuser/someimage`.
-    ("tag", $tag), # The name of the new tag.
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("repo", repo) # The repository to tag in. For example, `someuser/someimage`.
+  queryForApiCallarray.addEncode("tag", tag) # The name of the new tag.
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
   return await docker.client.request(docker.basepath & fmt"/images/{name}/tag" & "?" & queryForApiCall, HttpMethod.HttpPost)
 

@@ -30,9 +30,9 @@ proc taskInspect*(docker: Docker | AsyncDocker, id: string): Future[Task] {.mult
 
 proc taskList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Task]] {.multiSync.} =
   ## List tasks
-  let queryForApiCall = encodeQuery([
-    ("filters", $filters), # A JSON encoded value of the filters (a `map[string][]string`) to process on the tasks list.  Available filters:  - `desired-state=(running | shutdown | accepted)` - `id=<task id>` - `label=key` or `label=\"key=value\"` - `name=<task name>` - `node=<node id or name>` - `service=<service name>` 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("filters", filters) # A JSON encoded value of the filters (a `map[string][]string`) to process on the tasks list.  Available filters:  - `desired-state=(running | shutdown | accepted)` - `id=<task id>` - `label=key` or `label=\"key=value\"` - `name=<task name>` - `node=<node id or name>` - `service=<service name>` 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & "/tasks" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[seq[Task]](response)
@@ -40,15 +40,15 @@ proc taskList*(docker: Docker | AsyncDocker, filters: string): Future[seq[Task]]
 
 proc taskLogs*(docker: Docker | AsyncDocker, id: string, details: bool, follow: bool, stdout: bool, stderr: bool, since: int, timestamps: bool, tail: string): Future[string] {.multiSync.} =
   ## Get task logs
-  let queryForApiCall = encodeQuery([
-    ("details", $details), # Show task context and extra details provided to logs.
-    ("follow", $follow), # Keep connection after returning logs.
-    ("stdout", $stdout), # Return logs from `stdout`
-    ("stderr", $stderr), # Return logs from `stderr`
-    ("since", $since), # Only return logs since this time, as a UNIX timestamp
-    ("timestamps", $timestamps), # Add timestamps to every log line
-    ("tail", $tail), # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
-  ])
+  var queryForApiCallarray: seq[(string, string)] = @[]
+  queryForApiCallarray.addEncode("details", details) # Show task context and extra details provided to logs.
+  queryForApiCallarray.addEncode("follow", follow) # Keep connection after returning logs.
+  queryForApiCallarray.addEncode("stdout", stdout) # Return logs from `stdout`
+  queryForApiCallarray.addEncode("stderr", stderr) # Return logs from `stderr`
+  queryForApiCallarray.addEncode("since", since) # Only return logs since this time, as a UNIX timestamp
+  queryForApiCallarray.addEncode("timestamps", timestamps) # Add timestamps to every log line
+  queryForApiCallarray.addEncode("tail", tail) # Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines. 
+  let queryForApiCall = queryForApiCallarray.encodeQuery()
 
   let response = await docker.client.request(docker.basepath & fmt"/tasks/{id}/logs" & "?" & queryForApiCall, HttpMethod.HttpGet)
   return await constructResult1[string](response)

@@ -21,7 +21,7 @@ type `Type`* {.pure.} = enum
 
 type Port* = object
   ## An open port on a container
-  IP*: string ## Host IP address that the container's port is mapped to
+  ip*: string ## Host IP address that the container's port is mapped to
   privatePort*: int ## Port on the container
   publicPort*: int ## Port exposed on the host
   `type`*: `Type`
