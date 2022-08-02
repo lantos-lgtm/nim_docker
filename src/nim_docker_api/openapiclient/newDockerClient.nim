@@ -4,25 +4,24 @@ import asyncdispatch
 type
     Docker* = object
         client*: HttpClient
-        basepath*: string
+        baseUri*: Uri
+        headers*: HttpHeaders
     AsyncDocker* = object
         client*: AsyncHttpClient
-        basepath*: string
+        baseUri*: Uri
+        headers*: HttpHeaders
 
-let headers = newHttpHeaders({
+let defaultDocketHeaders = {
   "Host": "v1.41",
   "User-Agent": "nim-Docker-Client",
   "Content-Type": "application/json",
   "Accept": "application/json"
-})
+}
+let uri = Uri(scheme: "unix", hostname: "/var/run/docker.sock", path: "")
+proc initDocker*(baseUri = uri): Docker =
+  result.headers = newHttpHeaders(defaultDocketHeaders)
+  result.baseUri = baseUri
 
-
-proc initDocker*(basepath: string = "unix:///var/run/docker.sock"): Docker =
-  result.client = initHttpClient(basepath)
-  result.client.headers = headers
-  result.basepath = basepath
-
-proc initAsyncDocker*(basepath: string = "unix:///var/run/docker.sock"): Future[AsyncDocker] {.async.} =
-  result.client = await initAsyncHttpClient(basepath, headers)
-  result.client.headers = headers
-  result.basepath = basepath
+proc initAsyncDocker*(baseUri = uri): Future[AsyncDocker] {.async.} =
+  result.headers = newHttpHeaders(defaultDocketHeaders)
+  result.baseUri = baseUri
