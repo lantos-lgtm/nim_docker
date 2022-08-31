@@ -1,6 +1,6 @@
 import jsony
 # import typetraits
-import httpclient
+import customHttpClient
 import macros
 import options
 import times
