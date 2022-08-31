@@ -8,7 +8,7 @@ import
   strutils,
   os
 
-export httpcore, uri
+export httpcore, uri, net, asyncnet
 
 type
   HttpClient* = object
@@ -216,11 +216,13 @@ proc fetch*(
   # set up the uri
   var uri = when uri is string: parseUri(uri) else: uri
   # set up the socket
-  var socket = when client is HttpClient: initSocket(uri) else: await initAsyncSocket(uri)
+  var socket = when client is HttpClient: initSocket(
+      uri) else: await initAsyncSocket(uri)
 
   when defined(ssl):
     if uri.scheme == "https":
-      var sslContext = if client.sslContext != nil: client.sslContext else: newContext()
+      var sslContext = if client.sslContext !=
+          nil: client.sslContext else: newContext()
       sslContext = if sslContext != nil: sslContext else: newContext()
       wrapConnectedSocket(sslContext, socket, handshakeAsClient, uri.hostname)
 
@@ -251,6 +253,7 @@ proc fetch*(
 
 proc mainAsync() {.async.} =
   var client: AsyncHttpClient
+  
   var response = await client.fetch("http://info.cern.ch/hypertext/WWW/TheProject.html", HttpGet)
   for data in response.body():
     echo data
@@ -260,7 +263,11 @@ proc mainAsync() {.async.} =
     "Accept": "*/*",
     "Host": "v1.41",
   })
-  let uri = Uri(scheme: "unix", hostname: "/var/run/docker.sock", path: "/v1.41/containers/json")
+  let uri = Uri(
+    scheme: "unix",
+    hostname: "/var/run/docker.sock",
+    path: "/v1.41/containers/json"
+  )
   response = await client.fetch(uri, HttpGet, headers = headers)
   for data in response.body():
     echo data

@@ -6,36 +6,10 @@ import options
 import times
 import strutils
 import tables
-import streams
-import asyncstreams
 import asyncdispatch
 import net
 import uri
-import oldDockerClient
 
-
-# something to help with boilerplate
-proc constructResult1*[T](response: Response | AsyncResponse): Future[
-    T] {.multiSync.} =
-  case response.code():
-  of{Http200, Http201, Http202, Http204, Http206, Http304}:
-    when T is void:
-      return
-    elif T is Stream:
-      return response.bodyStream
-    elif T is FutureStream[string]:
-      let bodyStream = response.bodyStream
-      return bodyStream
-    elif T is string:
-      return await response.body()
-    else:
-      return (await response.body()).fromJson(T.typedesc)
-  of Http400:
-    raise newException(BadRequest, await response.body())
-  of Http404:
-    raise newException(NotFound, await response.body())
-  else:
-    raise newException(ServerError, await response.body())
 
 proc addEncode*[T](dest: var seq[(string, string)], key: string, val: T) =
   when val is Option:
@@ -72,15 +46,6 @@ proc renameHook*(v: object, fieldName: var string) =
       MyTest = object
         id: string
         myFancyField: string
-
-    var myJson = """
-    {
-      "Id": "someId",
-      "MyFancyField": "foo"
-    }
-    """
-    let myTest = myJson.fromJson(MyTest)
-    echo myTest
 
   var tempFieldName = fieldName
   tempFieldName[0] = tempFieldName[0].toLowerAscii()

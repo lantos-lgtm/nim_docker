@@ -1,8 +1,5 @@
 import ./customHttpClient
-import 
-  asyncdispatch,
-  net,
-  asyncnet
+import asyncdispatch
 
 type
     Docker* = object

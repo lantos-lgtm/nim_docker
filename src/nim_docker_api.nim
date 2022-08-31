@@ -15,7 +15,6 @@ export openapiclient, tables, jsony, options
 proc mainAsync*() {.async.} =
 
     var docker = initAsyncDocker()
-    # var docker = initDocker("unix:///Users/lyndon/Desktop/deploy.me/backend/src/nim_docker_api/remote.docker.sock")
 
     echo "getting container stats"
     echo (await docker.containerList())
