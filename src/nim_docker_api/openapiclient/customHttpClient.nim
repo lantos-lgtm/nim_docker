@@ -79,14 +79,19 @@ proc initAsyncSocket(uri: Uri): Future[AsyncSocket] {.async.} =
     return await initAsyncUnixSocket(uri)
   return await asyncnet.dial(uri.hostname, port)
 
-proc sendGreeting(socket: Socket | AsyncSocket, httpMethod: HttpMethod,
-    path: string): Future[void] {.multisync.} =
+proc sendGreeting(
+    socket: Socket | AsyncSocket,
+    httpMethod: HttpMethod,
+    path: string
+  ): Future[void] {.multisync.} =
   let message = $httpMethod & " " & path & " HTTP/1.1\r\n"
   when defined(verbose): echo "> ", message
   await socket.send(message)
 
-proc sendHeaders(socket: Socket | AsyncSocket, headers: HttpHeaders): Future[
-    void] {.multisync.} =
+proc sendHeaders(
+    socket: Socket | AsyncSocket,
+    headers: HttpHeaders
+  ): Future[void] {.multisync.} =
   for key, value in headers:
     let message = key & ": " & value
     when defined(verbose): echo "h> " & message
@@ -94,15 +99,17 @@ proc sendHeaders(socket: Socket | AsyncSocket, headers: HttpHeaders): Future[
   when defined(verbose): echo "h> \\r\\n"
   await socket.send("\r\n")
 
-proc sendBody(socket: Socket | AsyncSocket, body: string): Future[
-    void] {.multisync.} =
+proc sendBody(
+    socket: Socket | AsyncSocket,
+    body: string
+  ): Future[void] {.multisync.} =
   # TODO: chunked encoding
   when defined(verbose): echo "b> ", body
   await socket.send(body)
 
-proc recvGreeting(socket: Socket | AsyncSocket): Future[
-    Greeting] {.multisync.} =
-
+proc recvGreeting(
+    socket: Socket | AsyncSocket
+  ): Future[Greeting] {.multisync.} =
   var line = await socket.recvLine()
   when defined(verbose): echo "g< ", line
   var parts = line.split(" ")
@@ -129,7 +136,9 @@ proc recvHeaders(socket: Socket | AsyncSocket): Future[
       raise newException(HttpError, "Invalid header: " & line)
     result.add(line[0..posSplit-1].strip(), line[posSplit+1..line.high].strip())
 
-proc recvChunk*(socket: Socket | AsyncSocket): Future[Chunk] {.multisync.} =
+proc recvChunk*(
+    socket: Socket | AsyncSocket
+  ): Future[Chunk] {.multisync.} =
   let chunkHeader = await socket.recvLine()
   when defined(verbose): echo "ch< ", cast[seq[char]](chunkHeader)
   let chunkHeaderSpacePos = chunkHeader.find(' ')
@@ -152,8 +161,9 @@ proc recvChunk*(socket: Socket | AsyncSocket): Future[Chunk] {.multisync.} =
   if expectedNewLine != "\r\n":
     raise newException(HttpError, "expected \\r\\n but got: " & expectedNewLine)
 
-proc recvData*(response: Response | AsyncResponse): Future[
-    string] {.multisync.} =
+proc recvData*(
+    response: Response | AsyncResponse
+  ): Future[string] {.multisync.} =
   ## recv one part of return data
   ## use proc body() to get all data
   ## use iterator body() to stream data from chunks
@@ -182,10 +192,14 @@ iterator body*(response: Response | AsyncResponse): string =
   while true:
     let line = when response is Response: response.recvData() else: waitFor response.recvData()
     if line.len == 0 or line in ["", "\r\n"]:
+      # end of data close the socket
+      response.socket.close()
       break
     yield line
 
-proc body*(response: Response | AsyncResponse): Future[string] {.multisync.} =
+proc body*(
+    response: Response | AsyncResponse
+  ): Future[string] {.multisync.} =
   ## get body all at once
   for data in response.body():
     result.add(data)
@@ -213,12 +227,26 @@ proc fetch*(
     headers: HttpHeaders = newHttpHeaders(defaultHeaders),
     sslContext: SslContext = nil
   ): Future[Response | AsyncResponse] {.multisync.} =
+  # 1. create socket
+  # 2. open socket
+  # 3. send greeting
+  # 4. send headers
+  # 5. receive greeting
+  # 6. receive headers
+  # 7. send body
+    # 7.1 if chunked: send chunked body
+    # 7.2 if contentLength: send contentLength body
+    # 7.3 if multipart: send multipart body
+  # 8. return response
+  # client can then read the body
+
   # set up the uri
   var uri = when uri is string: parseUri(uri) else: uri
   # set up the socket
   var socket = when client is HttpClient: initSocket(
       uri) else: await initAsyncSocket(uri)
 
+  # if is http wrap socket with ssl cert
   when defined(ssl):
     if uri.scheme == "https":
       var sslContext = if client.sslContext !=
@@ -231,13 +259,14 @@ proc fetch*(
   if not headers.hasKey("Host"):
     headers.add("Host", uri.hostname)
 
-  # make sure we have a host header
+  # make sure we have a content len header if the body is set
   if body != "":
     headers["Content-length"] = $body.len
 
-  # construct path
+  # construct path to call with fetch
   var path = if uri.path == "": "/" else: uri.path
   path = if uri.query != "": path & "?" & uri.query else: path
+
 
   await socket.sendGreeting(httpMethod, path)
   await socket.sendHeaders(headers)
@@ -253,7 +282,7 @@ proc fetch*(
 
 proc mainAsync() {.async.} =
   var client: AsyncHttpClient
-  
+
   var response = await client.fetch("http://info.cern.ch/hypertext/WWW/TheProject.html", HttpGet)
   for data in response.body():
     echo data

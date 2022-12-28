@@ -6,8 +6,8 @@ import
     nim_docker_api/openapiclient,
     tables,
     jsony,
-    options,
-    asyncdispatch
+    options
+
 
 export openapiclient, tables, jsony, options
 
@@ -17,7 +17,7 @@ proc mainAsync*() {.async.} =
     var docker = initAsyncDocker()
 
     echo "getting container stats"
-    echo (await docker.containerList())
+    echo await docker.containerList()
 
     let containerName = "myContainer0Async"
 
@@ -57,16 +57,16 @@ proc mainAsync*() {.async.} =
                     PortBinding(
                         hostIp: "",
                         hostPort: "8080"
-                    )
-                let queryForApiCall = queryForApiCallarray.encodeQuery()
-            }.newTable()[])
+            )
+        ])}.newTable()[]
         ))
-    )
+    ))
 
-    # creating new container    
+    # creating new container
     echo "creating " & containerName & " container"
     try:
-        var containerCreateResponse = await docker.containerCreate(containerCreateRequest, containerName)
+        var containerCreateResponse = await docker.containerCreate(
+                containerCreateRequest, containerName)
         echo containerCreateResponse
     except:
         echo "error:", res.code()

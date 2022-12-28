@@ -11,6 +11,4 @@ bin           = @["nim_docker_api"]
 
 requires "nim >= 1.6.6"
 requires "jsony"
-requires "libcurl"
-requires "puppy"
-requires "reactor"
+requires "regex"

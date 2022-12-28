@@ -406,7 +406,7 @@ export model_volume_usage_data
 
 # APIs
 # import openapiclient/apis/api_config
-# import openapiclient/apis/api_container
+import openapiclient/apis/api_container
 # import openapiclient/apis/api_distribution
 # import openapiclient/apis/api_exec
 # import openapiclient/apis/api_image
@@ -423,7 +423,7 @@ export model_volume_usage_data
 # import openapiclient/apis/api_volume
 
 # export api_config
-# export api_container
+export api_container
 # export api_distribution
 # export api_exec
 # export api_image
@@ -440,5 +440,8 @@ export model_volume_usage_data
 # export api_volume
 
 
-import tables, options
-export tables, options
+import tables, options, asyncdispatch, openapiclient/dockerClient
+import openapiclient/customHttpClient
+export customHttpClient
+
+export tables, options, asyncdispatch, dockerClient

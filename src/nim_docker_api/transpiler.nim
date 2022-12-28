@@ -12,6 +12,7 @@ var filesFinalTable = initTable[string, string]()
 proc translateFile(filename, path: string) =
     var data = path.readFile()
 
+    # add some white space to the end of the file
     data.add("""
 
 
@@ -32,7 +33,19 @@ proc translateFile(filename, path: string) =
     data = data.replace("DateTime", "Date")
 
     # map numbers order matters
-    let number_replace = @[ "uint64", "uint32", "uint8", "uint", "int64", "int32", "int8","int", "float64", "float32", "float"]
+    let number_replace = @[
+        "uint64",
+        "uint32",
+        "uint8",
+        "uint",
+        "int64",
+        "int32",
+        "int8",
+        "int",
+        "float64",
+        "float32",
+        "float"]
+        
     for val in number_replace:
         data = data.replace(re("\\s" & val & "(\\n|\\s+)?"), "Number$1")
 
@@ -89,27 +102,23 @@ proc translateImports(filename: string, text: string) =
     tempFile = tempFile.replace(importMatch, importReplace)
 
     # if had mapping pull it in
-    for importFile in  importFiles:
+    for importFile in importFiles:
         if exportsTable.hasKey(importFile & ".nim"):
             # create import { name } from "./file.nim"
             let importStringsSaved = exportsTable[importFile & ".nim"]
-            let importString = "import {" & importStringsSaved.foldl(a & ", " & b ) & "} from \"./" & importFile & ".nim\";\n"
-          
+            let importString = "import {" & importStringsSaved.foldl(a & ", " &
+                    b) & "} from \"./" & importFile & ".nim\";\n"
+
             tempFile = importString & tempFile
 
     filesFinalTable[filename] = tempFile
 
 
-# translateFile("model_event_message", "src/nim_docker_api/openapiclient/models/model_event_message.nim")
-# translateImports("model_event_message", filesTable["model_event_message"])
-
 for file in walkDir("src/nim_docker_api/openapiclient/models/"):
     translateFile(file.path.extractFilename, file.path)
 
-
 for filename, text in filesTable.pairs():
     translateImports(filename, text)
-
 
 createDir("./typescript/")
 for (filename, text) in filesFinalTable.pairs():
